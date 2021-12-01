@@ -36,8 +36,7 @@ public class d01 {
     public static int findIncreases(Integer[] values, int windowSize) {
         int count = 0;
         for (int i = windowSize; i < values.length; i++) {
-            int start = values[i - windowSize];
-            if (values[i] > start) {
+            if (values[i] > values[i - windowSize]) {
                 count++;
             }
         }
