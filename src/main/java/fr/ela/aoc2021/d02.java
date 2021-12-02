@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 public class d02 {
 
@@ -18,17 +19,17 @@ public class d02 {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 
     public static int computePosition(Path input, Position pos) throws IOException {
-        Files.lines(input).forEach(s -> move.accept(pos, s));
-        return pos.result();
+        return Files.lines(input)
+                .reduce(pos, move, (p1, p2) -> p1).result();
     }
 
-    private static BiConsumer<Position, String> move = (p, s) -> {
+    private static final BiFunction<Position, String, Position> move = (p, s) -> {
             String[] values = s.split(" ");
             Direction.valueOf(values[0]).moveFunction.accept(p, Integer.parseInt(values[1]));
+            return p;
         };
 
     private static class Position {
@@ -57,7 +58,5 @@ public class d02 {
             this.moveFunction = moveFunction;
         }
     }
-
-
 
 }
