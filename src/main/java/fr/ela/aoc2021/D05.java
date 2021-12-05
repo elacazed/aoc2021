@@ -100,7 +100,6 @@ public class D05 extends AoC {
             List<Position> positions = new ArrayList<>();
             int incX = getInc(start.x, end.x);
             int incY = getInc(start.y, end.y);
-            int y = start.y;
             for (int n = 0; n <= length; n++) {
                 positions.add(new Position(start.x + n * incX, start.y + n * incY));
             }
