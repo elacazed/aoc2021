@@ -7,19 +7,20 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 public class D05 extends AoC {
 
-
     @Override
     public void run() {
-        Space testSpace = stream(getTestInputPath()).map(Line::parse).filter(Objects::nonNull).collect(Collectors.toCollection(Space::new));
-        System.out.println("Test result part 1 : " + testSpace.findPositionsWithOverlappingLines(2, l -> EnumSet.of(Direction.HORIZONTAL, Direction.VERTICAL).contains(l.direction)));
-        System.out.println("Test result part 2 : " + testSpace.findPositionsWithOverlappingLines(2, l -> true));
+        List<Line> testSpace = stream(getTestInputPath()).map(Line::parse).collect(Collectors.toList());
+        System.out.println("Test result part 1 : " + findPositionsWithOverlappingLines(testSpace.stream().filter(Line::isAlongAxes), 2));
+        System.out.println("Test result part 2 : " + findPositionsWithOverlappingLines(testSpace.stream(),2));
 
-        Space space = stream(getInputPath()).map(Line::parse).filter(Objects::nonNull).collect(Collectors.toCollection(Space::new));
-        System.out.println("Real result part 1 : " + space.findPositionsWithOverlappingLines(2, l -> EnumSet.of(Direction.HORIZONTAL, Direction.VERTICAL).contains(l.direction)));
-        System.out.println("Real result part 2 : "+space.findPositionsWithOverlappingLines(2, l -> true));
+        List<Line> space = stream(getInputPath()).map(Line::parse).collect(Collectors.toList());
+        System.out.println("Real result part 1 : " + findPositionsWithOverlappingLines(space.stream().filter(Line::isAlongAxes), 2));
+        System.out.println("Real result part 2 : " + findPositionsWithOverlappingLines(space.stream(), 2));
     }
 
     record Position(int x, int y) {
@@ -27,84 +28,35 @@ public class D05 extends AoC {
             String[] pos = s.split(",");
             return new Position(Integer.parseInt(pos[0]), Integer.parseInt(pos[1]));
         }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            Position position = (Position) o;
-            return x == position.x && y == position.y;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(x, y);
-        }
     }
 
-    public static class Space extends ArrayList<Line> {
-
-        public long findPositionsWithOverlappingLines(int number, Predicate<Line> filter) {
-            return stream().filter(filter)
-                    .map(Line::positions)
-                    .flatMap(List::stream)
-                    .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
-                    .entrySet().stream()
-                    .filter(e -> e.getValue() >= number)
-                    .count();
-        }
+    public static long findPositionsWithOverlappingLines(Stream<Line> linesStream, int number) {
+        return linesStream
+                .flatMap(Line::streamPositions)
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+                .entrySet().stream()
+                .filter(e -> e.getValue() >= number)
+                .count();
     }
 
-    private enum Direction {
-        HORIZONTAL,
-        VERTICAL,
-        DIAGONAL;
-
-        static Direction get(Position start, Position end) {
-            if (Math.abs(start.y - end.y) == Math.abs(start.x - end.x)) {
-                return Direction.DIAGONAL;
-            }
-            if (start.x == end.x) {
-                return Direction.VERTICAL;
-            }
-            if (start.y == end.y) {
-                return Direction.HORIZONTAL;
-            }
-            return null;
-        }
-    }
-
-    record Line(Position start, Position end, Direction direction, int length) {
+    record Line(Position start, Position end, int length) {
 
         static Line parse(String s) {
             String[] l = s.split(" -> ");
             Position start = Position.parse(l[0]);
             Position end = Position.parse(l[1]);
-            Direction dir = Direction.get(start, end);
             int length = Math.max(Math.abs(start.x - end.x), Math.abs(start.y - end.y));
-            if (dir == null) {
-                return null;
-            } else {
-                return new Line(start, end, dir, length);
-            }
+            return new Line(start, end, length);
         }
 
-        int getInc(int start, int end) {
-            if (start == end) {
-                return 0;
-            }
-            return start < end ? 1 : -1;
+        boolean isAlongAxes() {
+            return start.x == end.x || start.y == end.y;
         }
 
-        List<Position> positions() {
-            List<Position> positions = new ArrayList<>();
-            int incX = getInc(start.x, end.x);
-            int incY = getInc(start.y, end.y);
-            for (int n = 0; n <= length; n++) {
-                positions.add(new Position(start.x + n * incX, start.y + n * incY));
-            }
-            return positions;
+        Stream<Position> streamPositions() {
+            int incX = Integer.compare(end.x, start.x);
+            int incY = Integer.compare(end.y, start.y);
+            return IntStream.range(0, length + 1).mapToObj(n -> new Position(start.x + n * incX, start.y + n * incY));
         }
-
     }
 }
