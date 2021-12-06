@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
 public class D06 extends AoC {
@@ -11,17 +12,13 @@ public class D06 extends AoC {
     @Override
     public void run() {
         FishPopulation testPopulation = readPopulation(getTestInputPath());
-        testPopulation.shift(80);
-        System.out.println("Test result part 1 : "+testPopulation.total());
+        System.out.println("Test result part 1 : " + testPopulation.grow(80));
 
         FishPopulation population = readPopulation(getInputPath());
-        population.shift(80);
-        System.out.println("Real result part 1 : "+population.total());
+        System.out.println("Real result part 1 : " + population.grow(80));
 
-        testPopulation.shift(256 - 80);
-        System.out.println("Test result part 2 : "+testPopulation.total());
-        population.shift(256 - 80);
-        System.out.println("Real result part 2 : "+population.total());
+        System.out.println("Test result part 2 : " + testPopulation.grow(256 - 80));
+        System.out.println("Real result part 2 : " + population.grow(256 - 80));
     }
 
     FishPopulation readPopulation(Path input) {
@@ -29,24 +26,27 @@ public class D06 extends AoC {
     }
 
     static class FishPopulation {
-        long[] ages;
+        // Number of fishes for each timer value
+        private long[] ages;
+        // Age of the population in days.
+        private int age;
+
         public FishPopulation(List<Integer> fishes) {
             ages = new long[9];
+            age = 0;
             Arrays.fill(ages, 0);
             for (int age : fishes) {
                 ages[age]++;
             }
         }
-        void shift(int days) {
-            for (int d = 0; d < days; d++) {
-                long nb0 = ages[0];
-                System.arraycopy(ages, 1, ages, 0, 8);
-                ages[6] += nb0;
-                ages[8] = nb0;
-            }
+
+        void grow() {
+            ages[(age + 7) % 9] += ages[age % 9];
+            age++;
         }
 
-        long total() {
+        long grow(int days) {
+            IntStream.range(0, days).forEach(i -> this.grow());
             return LongStream.of(ages).sum();
         }
     }
