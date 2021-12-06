@@ -38,6 +38,13 @@ public abstract class AoC {
     public Path getInputPath() {
         return getPath("input");
     }
+    public String readFile(Path path) {
+        try {
+            return Files.readString(path);
+        } catch (IOException ioe) {
+            throw new RuntimeException(ioe);
+        }
+    }
 
     public <T> List<T> list(Path path, Function<String, T> mapper) {
         return stream(path, mapper).collect(Collectors.toList());
