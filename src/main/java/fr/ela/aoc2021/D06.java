@@ -1,9 +1,7 @@
 package fr.ela.aoc2021;
 
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
@@ -11,18 +9,14 @@ public class D06 extends AoC {
 
     @Override
     public void run() {
-        FishPopulation testPopulation = readPopulation(getTestInputPath());
+        FishPopulation testPopulation = new FishPopulation(oneLineList(getTestInputPath(), ",", Integer::parseInt));
         System.out.println("Test result part 1 : " + testPopulation.grow(80));
 
-        FishPopulation population = readPopulation(getInputPath());
+        FishPopulation population = new FishPopulation(oneLineList(getTestInputPath(), ",", Integer::parseInt));
         System.out.println("Real result part 1 : " + population.grow(80));
 
         System.out.println("Test result part 2 : " + testPopulation.grow(256 - 80));
         System.out.println("Real result part 2 : " + population.grow(256 - 80));
-    }
-
-    FishPopulation readPopulation(Path input) {
-        return new FishPopulation(Arrays.stream(readFile(input).split(",")).map(Integer::parseInt).collect(Collectors.toList()));
     }
 
     static class FishPopulation {

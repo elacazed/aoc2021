@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -44,6 +45,14 @@ public abstract class AoC {
         } catch (IOException ioe) {
             throw new RuntimeException(ioe);
         }
+    }
+
+    public <T> Stream<T> oneLineStream(Path path, String sep, Function<String, T> mapper) {
+        return Arrays.stream(readFile(path).split(sep)).map(mapper);
+    }
+
+    public <T> List<T> oneLineList(Path path, String sep, Function<String, T> mapper) {
+        return Arrays.stream(readFile(path).split(sep)).map(mapper).collect(Collectors.toList());
     }
 
     public <T> List<T> list(Path path, Function<String, T> mapper) {

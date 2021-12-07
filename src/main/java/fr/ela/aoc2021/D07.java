@@ -1,75 +1,54 @@
 package fr.ela.aoc2021;
 
-import java.util.Arrays;
-import java.util.Comparator;
+import java.util.IntSummaryStatistics;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.IntFunction;
-import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class D07 extends AoC {
     @Override
     public void run() {
-        List<Integer> crabsPosition = Arrays.stream(readFile(getTestInputPath())
-                .split(","))
-                .map(Integer::parseInt)
-                .collect(Collectors.toList());
-        System.out.println("Solution Test partie 1 : " + getFuel(crabsPosition, consoPart1));
-        System.out.println("Solution Test mediane : " + mediane(crabsPosition));
+        List<Integer> testCrabsPositions = oneLineList(getTestInputPath(), ",", Integer::parseInt);
+        System.out.println("Solution Test partie 1 : " + getMinFuelConsumption(testCrabsPositions, consoPart1));
+        System.out.println("Solution Test partie 2 : " + getMinFuelConsumption(testCrabsPositions, consoPart2));
 
-        System.out.println("Solution Test partie 2 : " + getFuel(crabsPosition, consoPart2));
-        crabsPosition = Arrays.stream(readFile(getInputPath())
-                .split(","))
-                .map(Integer::parseInt)
-                .collect(Collectors.toList());
-        System.out.println("Solution partie 1 : " + getFuel(crabsPosition, consoPart1));
-        System.out.println("Solution mediane : " + mediane(crabsPosition));
-        System.out.println("Solution partie 2 : " + getFuel(crabsPosition, consoPart2));
+        List<Integer> crabsPositions = oneLineList(getTestInputPath(), ",", Integer::parseInt);
+        System.out.println("Solution partie 1 : " + getMinFuelConsumption(crabsPositions, consoPart1));
+        System.out.println("Solution partie 2 : " + getMinFuelConsumption(crabsPositions, consoPart2));
     }
 
-    private int mediane(List<Integer> crabsPosition) {
-        crabsPosition.sort(Comparator.naturalOrder());
-        int nb = crabsPosition.size();
-        int position = nb % 2 == 1 ? (nb / 2) + 1 : nb / 2;
-        final int mediane = crabsPosition.get(position);
-
-        return crabsPosition.stream()
-                .mapToInt(p -> consoPart1.apply(mediane).apply(p))
-                .sum();
+    /*
+     * Calcule la consommation de tous les crabes pour atteindre la position cible en utilisant la fonction de consommation donnée.
+     */
+    private int fuelConsumption(List<Integer> crabsPositions, BiFunction<Integer, Integer, Integer> conso, int target) {
+        Function<Integer, Integer> consoFunction = p -> conso.apply(p, target);
+        return crabsPositions.stream().mapToInt(consoFunction::apply).sum();
     }
 
-
-    private int getFuel(List<Integer> crabsPosition, Function<Integer, IntFunction<Integer>> conso) {
-        crabsPosition.sort(Comparator.naturalOrder());
-        Integer min = crabsPosition.get(0);
-        Integer max = crabsPosition.get(crabsPosition.size() - 1);
-        int targetPosition = -1;
-        int minFuel = -1;
-        for (int i = min; i <= max; i++) {
-            final int target = i;
-            int fuel = crabsPosition.stream()
-                    .mapToInt(p -> conso.apply(target).apply(p))
-                    .sum();
-
-            int minFuel1 = minFuel == -1 ? fuel : Math.min(fuel, minFuel);
-            if (minFuel1 != minFuel) {
-                minFuel = minFuel1;
-                targetPosition = i;
-            }
-        }
-        System.out.println("Position cible : "+targetPosition);
-        return minFuel;
+    /*
+     * On cherche la valeur minimale de consommation pour les différentes positions cibles possibles,
+     * Soit entre les positions minimale et maximale des crabes, inclues.
+     */
+    private int getMinFuelConsumption(List<Integer> crabsPosition, BiFunction<Integer, Integer, Integer> conso) {
+        IntSummaryStatistics stats = crabsPosition.stream().mapToInt(Integer::intValue).summaryStatistics();
+        // Max is exclusive in range.
+        return IntStream.range(stats.getMin(), stats.getMax() + 1).map(t -> fuelConsumption(crabsPosition, conso, t)).min().orElseThrow();
     }
 
-    private Function<Integer, IntFunction<Integer>> consoPart1 = target ->
-            p -> Math.abs(p - target);
+    /*
+     * Fonction de calcul de la consommation partie 1 :
+     * prend en entrée la position du crabe et la position cible, retourne l'écart absolu.
+     */
+    private final BiFunction<Integer, Integer, Integer> consoPart1 = (position, target) -> Math.abs(position - target);
+    /*
+     * Fonction de calcul de la consommation partie 2 :
+     * prend en entrée la position du crabe et la position cible, retourne la somme des entiers de 0 à l'écart absolu.
+     * Soit n(n+1)/2 avec n = écart absolu = résultat de la fonction partie 1.
+     * Donc on compose.
+     */
+    private final BiFunction<Integer, Integer, Integer> consoPart2 = consoPart1.andThen(n -> n * (n + 1) / 2);
 
-    // 1+2...+n = n(n+1)/2
-    private Function<Integer, IntFunction<Integer>> consoPart2 = target ->
-            p -> {
-                int n = Math.abs(p - target);
-                return n * (n + 1) / 2;
-            };
 
 
 }
