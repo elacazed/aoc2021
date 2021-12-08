@@ -58,7 +58,6 @@ public class D08 extends AoC {
             for (int i = 0; i < size; i++) {
                 result += Math.pow(10, i) * dict.value(outputs.get(size - 1 - i));
             }
-            System.out.println(inputs.stream().collect(Collectors.joining(" "))+" | "+outputs.stream().collect(Collectors.joining(" "))+" : "+result);
             return result;
         }
     }
