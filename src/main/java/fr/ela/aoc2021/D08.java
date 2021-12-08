@@ -81,9 +81,8 @@ public class D08 extends AoC {
             String zero = null, two = null, three = null, five = null, six = null, nine = null;
 
             // On a 3 codes de 6 caractères aux index 6,7,8 pour les caractères 0, 6 et 9
-            // Celui qui représente 9 contient les caractères des codes de 1, 7 et 4 = codes d'index 0,1 et 2
-            // Celui qui représente 0 contient les caractères des codes de 1, 7 mais pas 4 (la barre au milieu) = codes d'index 0 et 1.
-            // Celui qui reste est 6, il contient les caractères du code de 4, mais pas 1 et pas 7
+            // Les codes de 0 et 9 contiennent les caractères de 1 et 7, mais pas 6 (il manque la barre en haut à droite) => on connaît 6.
+            // Le code de 9 contient tous les caractères du cide de 4, mais pas 0 => on peut distinguer 0 et 9.
             for (int i = 6; i <= 8; i++) {
                 String d = entries.get(i);
                 if (matchesAll(d, one, seven)) {
@@ -96,18 +95,19 @@ public class D08 extends AoC {
                     six = d;
                 }
             }
-            // On a 3 chaînes de longueur 5 pour les caractères 2, 3 et 5 aux index 3,4 et 5 dans le tableau.
-            // Le code de 3 contient les caractères des codes de 1 et 7
-            // Les codes de 2 et 5 ne contiennent pas tous les caractères verticaux à droite.
-            // LE code trouvé pour 6 à l'étape au dessus contient tous les caractres du 5.
+            // On a 3 chaînes de longueur 5 pour les caractères 2, 3 et 5.
+            // Les codes de 2 et 5 ne contiennent pas tous les caractères du code de 1 => on connaît 3.
+            // Le code de 6 contient tous les caractères du code de 5.
             for (int i = 3; i <= 5; i++) {
                 String d = entries.get(i);
-                if (matchesAll(d, one, seven)) {
-                    three = d;
-                } else if (matchesAll(six, d)) {
-                    five = d;
+                if (! matchesAll(d, one)) {
+                    if (matchesAll(six, d)) {
+                        five = d;
+                    } else {
+                        two = d;
+                    }
                 } else {
-                    two = d;
+                    three = d;
                 }
             }
             map.put(zero, 0);
