@@ -1,19 +1,25 @@
 package fr.ela.aoc2021;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class D10 extends AoC {
 
     private static final Map<Character, Character> DELIMITERS = Map.of('(', ')', '[', ']', '{', '}', '<', '>');
-    private static final Map<Character, Integer> SCORES = Map.of(')', 3, ']', 57, '}', 1197, '>', 25137);
+    private static final Map<Character, Integer> ERROR_SCORES = Map.of(')', 3, ']', 57, '}', 1197, '>', 25137);
+    private static final Map<Character, Integer> AUTOCOMPLETE_SCORES = Map.of(')', 1, ']', 2, '}', 3, '>', 4);
 
     public static class Chunk {
         public final char opening;
-        public final char closure;
+        public final char expectedClosure;
+        public char closure;
 
         public final List<Chunk> children;
         boolean closed = false;
@@ -29,14 +35,15 @@ public class D10 extends AoC {
 
         private Chunk(char open) {
             this.opening = open;
-            this.closure = DELIMITERS.get(open);
+            this.expectedClosure = DELIMITERS.get(open);
             this.children = new LinkedList<>();
         }
 
         public boolean close(char close) {
-            corrupted = (close == closure);
+            corrupted = (close != expectedClosure);
             closed = true;
-            return corrupted;
+            closure = close;
+            return !corrupted;
         }
 
         public static boolean isOpening(char c) {
@@ -47,24 +54,52 @@ public class D10 extends AoC {
             this.children.add(newChunk);
         }
     }
+
     @Override
     public void run() {
-        processPartOne(getTestInputPath(), "Test");
-        processPartOne(getInputPath(), "Real");
+        process(getTestInputPath(), "Test");
+        process(getInputPath(), "Real");
     }
 
-    public void processPartOne(Path input, String name) {
-        List<String> lines = list(input);
-        long score = lines.stream().mapToInt(this::syntaxErrorScore)
-                .filter(i -> i > 0)
-                .sum();
+    public void process(Path input, String name) {
+        Map<Boolean, List<Stack<Chunk>>> chunksList = list(input, this::readLine).stream().collect(Collectors.groupingBy(this::isCorrupted));
 
-        System.out.println(name+" Syntax Error Score : "+score);
+        long score = chunksList.get(Boolean.TRUE).stream().mapToInt(this::syntaxErrorCode).sum();
+        System.out.println(name + " Syntax Error Score : " + score);
+        List<Stack<Chunk>> incompleteChunks = chunksList.get(Boolean.FALSE);
+        System.out.println(name + " Autocomplete Score : " + autocompleteScore(incompleteChunks));;
+
     }
 
-    public int syntaxErrorScore(String line) {
+    public boolean isCorrupted(Stack<Chunk> chunks) {
+        return chunks.peek().corrupted;
+    }
+
+    public int syntaxErrorCode(Stack<Chunk> chunks) {
+        return ERROR_SCORES.get(chunks.peek().closure);
+    }
+
+    public long autocompleteScore(List<Stack<Chunk>> chunksList) {
+        List<Long> scores = chunksList.stream().mapToLong(this::autocomplete).boxed().sorted(Comparator.naturalOrder()).collect(Collectors.toList());
+        return scores.get(scores.size() / 2);
+    }
+
+    public long autocomplete(Stack<Chunk> chunks) {
+        long score = 0L;
+        int i = 0;
+        while (!chunks.isEmpty()) {
+            score = score * 5 + AUTOCOMPLETE_SCORES.get(chunks.pop().expectedClosure);
+            i++;
+        }
+        return score;
+    }
+
+
+    public Stack<Chunk> readLine(String line) {
         char[] chars = line.toCharArray();
         Stack<Chunk> chunks = new Stack<>();
+
+        List<Chunk> completeChunks = new ArrayList<>();
 
         Chunk currentChunk = Chunk.open(chars[0]);
         int index = 1;
@@ -78,16 +113,31 @@ public class D10 extends AoC {
             } else {
                 if (currentChunk.close(c)) {
                     if (chunks.isEmpty()) {
-                        return -1;
+                        completeChunks.add(currentChunk);
+                        if (index != chars.length - 1) {
+                            index++;
+                            currentChunk = Chunk.open(chars[index]);
+                        }
+                    } else {
+                        currentChunk = chunks.pop();
                     }
-                    currentChunk = chunks.pop();
                 } else {
-                    return SCORES.get(c);
+                    if (chunks.contains(currentChunk)) {
+                        while (chunks.peek() != currentChunk) {
+                            chunks.pop();
+                        }
+                    } else {
+                        chunks.push(currentChunk);
+                    }
+                    return chunks;
                 }
             }
             index++;
         }
-        return 0;
+        if (!chunks.contains(currentChunk)) {
+            chunks.push(currentChunk);
+        }
+        return chunks;
     }
 
 }
