@@ -17,7 +17,6 @@ public class D10 extends AoC {
         public final char opening;
         public final char expectedClosure;
         public char closure;
-        boolean closed = false;
         boolean corrupted = false;
 
         public static Chunk open(char c) {
@@ -35,7 +34,6 @@ public class D10 extends AoC {
 
         public boolean close(char close) {
             corrupted = (close != expectedClosure);
-            closed = true;
             closure = close;
             return !corrupted;
         }
