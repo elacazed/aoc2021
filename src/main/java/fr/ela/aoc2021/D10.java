@@ -1,14 +1,11 @@
 package fr.ela.aoc2021;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class D10 extends AoC {
 
@@ -20,8 +17,6 @@ public class D10 extends AoC {
         public final char opening;
         public final char expectedClosure;
         public char closure;
-
-        public final List<Chunk> children;
         boolean closed = false;
         boolean corrupted = false;
 
@@ -36,7 +31,6 @@ public class D10 extends AoC {
         private Chunk(char open) {
             this.opening = open;
             this.expectedClosure = DELIMITERS.get(open);
-            this.children = new LinkedList<>();
         }
 
         public boolean close(char close) {
@@ -48,10 +42,6 @@ public class D10 extends AoC {
 
         public static boolean isOpening(char c) {
             return DELIMITERS.containsKey(c);
-        }
-
-        public void addChild(Chunk newChunk) {
-            this.children.add(newChunk);
         }
     }
 
@@ -67,7 +57,8 @@ public class D10 extends AoC {
         long score = chunksList.get(Boolean.TRUE).stream().mapToInt(this::syntaxErrorCode).sum();
         System.out.println(name + " Syntax Error Score : " + score);
         List<Stack<Chunk>> incompleteChunks = chunksList.get(Boolean.FALSE);
-        System.out.println(name + " Autocomplete Score : " + autocompleteScore(incompleteChunks));;
+        System.out.println(name + " Autocomplete Score : " + autocompleteScore(incompleteChunks));
+        ;
 
     }
 
@@ -99,43 +90,23 @@ public class D10 extends AoC {
         char[] chars = line.toCharArray();
         Stack<Chunk> chunks = new Stack<>();
 
-        List<Chunk> completeChunks = new ArrayList<>();
-
-        Chunk currentChunk = Chunk.open(chars[0]);
+        Chunk firstChunk = Chunk.open(chars[0]);
+        chunks.push(firstChunk);
         int index = 1;
         while (index < chars.length) {
             char c = chars[index];
             if (Chunk.isOpening(c)) {
-                chunks.push(currentChunk);
                 Chunk newChunk = Chunk.open(c);
-                currentChunk.addChild(newChunk);
-                currentChunk = newChunk;
+                chunks.push(newChunk);
             } else {
+                Chunk currentChunk = chunks.peek();
                 if (currentChunk.close(c)) {
-                    if (chunks.isEmpty()) {
-                        completeChunks.add(currentChunk);
-                        if (index != chars.length - 1) {
-                            index++;
-                            currentChunk = Chunk.open(chars[index]);
-                        }
-                    } else {
-                        currentChunk = chunks.pop();
-                    }
+                    chunks.pop();
                 } else {
-                    if (chunks.contains(currentChunk)) {
-                        while (chunks.peek() != currentChunk) {
-                            chunks.pop();
-                        }
-                    } else {
-                        chunks.push(currentChunk);
-                    }
                     return chunks;
                 }
             }
             index++;
-        }
-        if (!chunks.contains(currentChunk)) {
-            chunks.push(currentChunk);
         }
         return chunks;
     }
