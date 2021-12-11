@@ -3,8 +3,9 @@ package fr.ela.aoc2021;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.IntSummaryStatistics;
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.Set;
 import java.util.Stack;
 import java.util.function.Function;
@@ -24,8 +25,18 @@ public class D11 extends AoC {
         Grid grid = new Grid(list(input));
         System.out.println("Grille " + name + " construite");
         System.out.println(grid);
-        System.out.println(name + " flashes : " + IntStream.range(0, 100).map(i -> grid.flash()).sum());
+        IntSummaryStatistics stats = IntStream.range(0, 100).map(i -> grid.flash())
+                .summaryStatistics();
 
+        System.out.println(name + " flashes : " +stats.getSum());
+        if (stats.getMax() == grid.size()) {
+            throw new IllegalStateException("Bummer");
+        }
+        int step = 101;
+        while (grid.flash() < grid.size()) {
+            step++;
+        }
+        System.out.println("All "+name+" octopusses flashes together at step "+step);
     }
 
     public class Grid {
@@ -46,6 +57,9 @@ public class D11 extends AoC {
                 }
                 row++;
             }
+        }
+        int size() {
+            return cols*rows;
         }
 
         public Stream<Point> rowStream(final int row) {
@@ -103,8 +117,7 @@ public class D11 extends AoC {
 
             }
             flashed.forEach(p -> set(p, 0));
-            int nbFlashes = flashed.size();
-            return nbFlashes;
+            return flashed.size();
         }
 
         Stream<Point> adjacent(Point p) {
@@ -117,17 +130,16 @@ public class D11 extends AoC {
                     getPoint(p, -1, 1),
                     getPoint(p, -1, 0),
                     getPoint(p, -1, -1))
-                    .filter(Optional::isPresent)
-                    .map(Optional::get);
+                    .filter(Objects::nonNull);
         }
 
-        Optional<Point> getPoint(Point p, int dx, int dy) {
+        Point getPoint(Point p, int dx, int dy) {
             int row = p.row + dx;
             int col = p.col + dy;
             if ((0 <= row && row < rows) && (0 <= col && col < cols)) {
-                return Optional.of(new Point(row, col));
+                return new Point(row, col);
             } else {
-                return Optional.empty();
+                return null;
             }
         }
 
