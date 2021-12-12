@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
+import java.util.function.BiPredicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -27,9 +28,11 @@ public class D12 extends AoC {
         buildCaves(list(input), start);
         System.out.println(name + " Cave System is ready!");
 
-        List<String> exitPaths = explore(start);
-        System.out.println(name+" Cave System has "+exitPaths.size()+" exits paths");
+        List<String> exitPaths = explorePartOne(start);
+        System.out.println(name + " Cave System has " + exitPaths.size() + " exits paths");
 
+        exitPaths = explorePartTwo(start);
+        System.out.println(name + " Cave System has " + exitPaths.size() + " exits paths");
     }
 
 
@@ -69,27 +72,37 @@ public class D12 extends AoC {
         }
 
         public void addNeighbour(Cave c) {
-            this.neighbours.add(c);
-            c.neighbours.add(this);
+            if (!c.isStart) {
+                this.neighbours.add(c);
+            }
+            if (!isStart) {
+                c.neighbours.add(this);
+            }
         }
 
         public String toString() {
-            return name + " -> [" + neighbours.stream().map(c -> c.name).sorted().collect(Collectors.joining(",")) + "]";
+            return name;
         }
 
     }
 
-    public List<String> explore(Cave start) {
-        CaveVisitor stack = new CaveVisitor(start);
-        return stack.explore();
+    public List<String> explorePartOne(Cave start) {
+        CaveVisitor stack = new CaveVisitor(start, CaveVisitor::exploreOnceAllowed);
+        return stack.explore(false);
+    }
+
+    public List<String> explorePartTwo(Cave start) {
+        CaveVisitor stack = new CaveVisitor(start, CaveVisitor::exploreTwiceAllowed);
+        return stack.explore(false);
     }
 
 
-
     public class CaveVisitor extends Stack<Cave> {
+        final BiPredicate<Cave, Boolean> revisitablePredicate;
 
-        public CaveVisitor(Cave start) {
+        public CaveVisitor(Cave start, BiPredicate<Cave, Boolean> visitablePredicate) {
             push(start);
+            this.revisitablePredicate = visitablePredicate;
         }
 
         @Override
@@ -103,8 +116,8 @@ public class D12 extends AoC {
             return c;
         }
 
-        public boolean canExplore(Cave cave) {
-            return cave.large || ! contains(cave);
+        public boolean wasExplored(Cave cave) {
+            return !cave.large && contains(cave);
         }
 
 
@@ -112,22 +125,46 @@ public class D12 extends AoC {
             return stream().map(c -> c.name).collect(Collectors.joining(","));
         }
 
-        public List<String> explore() {
+        public List<String> explore(boolean twiceVisited) {
             List<String> paths = new ArrayList<>();
             Cave from = peek();
             for (Cave next : from.neighbours) {
-                if (canExplore(next)) {
-                    push(next);
-                    if (next.isEnd) {
-                        paths.add(getPath());
-                    } else {
-                        paths.addAll(explore());
+                if (next.isEnd) {
+                    String path = getPath() + "," + next.name;
+                    paths.add(path);
+                    continue;
+                }
+                if (wasExplored(next)) {
+                    if (revisitablePredicate.test(next, twiceVisited)) {
+                        push(next);
+                        paths.addAll(explore(true));
+                        pop();
                     }
+                } else {
+                    push(next);
+                    paths.addAll(explore(twiceVisited));
                     pop();
                 }
             }
             return paths;
         }
-    }
 
+        private static boolean exploreOnceAllowed(Cave next, boolean twiceAllowed) {
+            return next.large;
+        }
+
+
+        private static boolean exploreTwiceAllowed(Cave next, boolean twiceVisited) {
+            if (next.isStart) {
+                return false;
+            }
+            if (next.isEnd) {
+                return false;
+            }
+            if (next.large) {
+                return true;
+            }
+            return !twiceVisited;
+        }
+    }
 }
