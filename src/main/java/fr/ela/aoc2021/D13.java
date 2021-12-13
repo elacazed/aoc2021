@@ -31,13 +31,13 @@ public class D13 extends AoC {
 
         Grid grid = new Grid();
         linesSorted.get(Boolean.FALSE).stream()
-                .map(Point::fromLine).forEach(grid::addPoint);
+                .map(Point::fromLine).forEach(grid::add);
         List<FoldingInstruction> folds = linesSorted.get(Boolean.TRUE).stream()
                 .map(FoldingInstruction::fromLine).collect(Collectors.toList());
 
         grid.fold(folds.get(0));
 
-        System.out.println(name + " grid has " + grid.visibleDots() + " visible dots after first fold");
+        System.out.println(name + " grid has " + grid.size() + " visible dots after first fold");
 
         folds.stream().skip(1).forEach(grid::fold);
 
@@ -47,32 +47,17 @@ public class D13 extends AoC {
     }
 
 
-    public class Grid {
-
-        Set<Point> points = new HashSet<>();
-
-        int nbCols;
-        int nbRows;
-
-        Grid() {
-        }
-
-        public void addPoint(Point p) {
-            nbCols = Math.max(p.col, nbCols);
-            nbRows = Math.max(p.row, nbRows);
-            points.add(p);
-        }
+    public class Grid extends HashSet<Point> {
 
         public void fold(FoldingInstruction fold) {
-            List<Point> toRemove = points.stream().filter(fold::moves).collect(Collectors.toList());
-            toRemove.forEach(points::remove);
-            toRemove.stream().map(fold::fold).forEach(this::addPoint);
-            fold.resize(this);
+            List<Point> toRemove = stream().filter(fold::moves).collect(Collectors.toList());
+            toRemove.forEach(this::remove);
+            toRemove.stream().map(fold::fold).forEach(this::add);
         }
 
         public String toString() {
-            int maxCol = nbCols + 1;
-            int maxRow = nbRows + 1;
+            int maxCol = stream().mapToInt(p -> p.col).max().orElseThrow() + 1;
+            int maxRow = stream().mapToInt(p -> p.row).max().orElseThrow() + 1;
 
             List<char[]> s = new ArrayList<>();
             for (int row = 0; row < maxRow + 1; row++) {
@@ -80,7 +65,7 @@ public class D13 extends AoC {
                 Arrays.fill(chars, '.');
                 s.add(chars);
             }
-            for (Point p : points) {
+            for (Point p : this) {
                 s.get(p.row)[p.col] = '#';
             }
             StringBuilder sb = new StringBuilder("----------\n");
@@ -90,26 +75,18 @@ public class D13 extends AoC {
             return sb.toString();
         }
 
-
-        public int visibleDots() {
-            return points.size();
-        }
     }
 
     public enum Direction {
-        X((g, value) -> { g.nbCols = (g.nbCols -1) /2;},
-                (p, value) -> p.col > value,
+        X((p, value) -> p.col > value,
                 (p, value) -> new Point(p.row, 2 * value - p.col)),
-        Y((g, value) -> { g.nbRows = (g.nbRows -1) /2;},
-                (p, value) -> p.row > value,
+        Y((p, value) -> p.row > value,
                 (p, value) -> new Point(2 * value - p.row, p.col));
 
-        final BiConsumer<Grid, Integer> resize;
         final BiFunction<Point, Integer, Point> foldAlong;
         final BiPredicate<Point, Integer> folds;
 
-        Direction(BiConsumer<Grid, Integer> resize, BiPredicate<Point, Integer> folds, BiFunction<Point, Integer, Point> foldAlong) {
-            this.resize = resize;
+        Direction(BiPredicate<Point, Integer> folds, BiFunction<Point, Integer, Point> foldAlong) {
             this.folds = folds;
             this.foldAlong = foldAlong;
         }
@@ -131,10 +108,6 @@ public class D13 extends AoC {
 
         public Point fold(Point p) {
             return axis.foldAlong.apply(p, value);
-        }
-
-        public void resize(Grid grid) {
-            axis.resize.accept(grid, value);
         }
     }
 
