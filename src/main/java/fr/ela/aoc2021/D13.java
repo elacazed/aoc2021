@@ -1,22 +1,14 @@
 package fr.ela.aoc2021;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
-import java.util.function.BiPredicate;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.function.Function;
 import java.util.stream.Collectors;
-
+import java.util.stream.IntStream;
 public class D13 extends AoC {
-
-    private static final Pattern FOLD_PATTERN = Pattern.compile("fold along ([xy])=([0-9]+)");
 
     @Override
     public void run() {
@@ -29,93 +21,58 @@ public class D13 extends AoC {
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.groupingBy(l -> l.charAt(0) == 'f'));
 
-        Grid grid = new Grid();
-        linesSorted.get(Boolean.FALSE).stream()
-                .map(Point::fromLine).forEach(grid::add);
-        List<FoldingInstruction> folds = linesSorted.get(Boolean.TRUE).stream()
-                .map(FoldingInstruction::fromLine).collect(Collectors.toList());
+        Set<Point> grid = linesSorted.get(Boolean.FALSE).stream()
+                .map(s -> s.split(","))
+                .map(s -> new Point(Integer.parseInt(s[1]), Integer.parseInt(s[0])))
+                .collect(Collectors.toSet());
 
-        grid.fold(folds.get(0));
+        List<Function<Set<Point>, Set<Point>>> folds = linesSorted.get(Boolean.TRUE).stream()
+                .map(this::toFold)
+                .collect(Collectors.toList());
 
+        grid = folds.get(0).apply(grid);
         System.out.println(name + " grid has " + grid.size() + " visible dots after first fold");
 
-        folds.stream().skip(1).forEach(grid::fold);
-
+        Function<Set<Point>, Set<Point>> folder = folds.stream().skip(1).reduce(Function::andThen).orElseThrow();
+        grid = folder.apply(grid);
         System.out.println(name + " Grid after all folding instructions : ");
-        System.out.println(grid);
-
+        System.out.println(toString(grid));
     }
 
-
-    public class Grid extends HashSet<Point> {
-
-        public void fold(FoldingInstruction fold) {
-            List<Point> toRemove = stream().filter(fold::moves).collect(Collectors.toList());
-            toRemove.forEach(this::remove);
-            toRemove.stream().map(fold::fold).forEach(this::add);
-        }
-
-        public String toString() {
-            int maxCol = stream().mapToInt(p -> p.col).max().orElseThrow() + 1;
-            int maxRow = stream().mapToInt(p -> p.row).max().orElseThrow() + 1;
-
-            List<char[]> s = new ArrayList<>();
-            for (int row = 0; row < maxRow + 1; row++) {
-                char[] chars = new char[maxCol + 1];
-                Arrays.fill(chars, '.');
-                s.add(chars);
-            }
-            for (Point p : this) {
-                s.get(p.row)[p.col] = '#';
-            }
-            StringBuilder sb = new StringBuilder("----------\n");
-            for (int i = 0; i < s.size(); i++) {
-                sb.append(i).append("\t").append(new String(s.get(i))).append("\n");
-            }
-            return sb.toString();
-        }
-
+    public Set<Point> foldOnY(Set<Point> set, int value) {
+        return set.stream().map(p -> p.row > value ? new Point((2 * value) - p.row, p.col) : p).collect(Collectors.toSet());
     }
 
-    public enum Direction {
-        X((p, value) -> p.col > value,
-                (p, value) -> new Point(p.row, 2 * value - p.col)),
-        Y((p, value) -> p.row > value,
-                (p, value) -> new Point(2 * value - p.row, p.col));
+    public Set<Point> foldOnX(Set<Point> set, int value) {
+        return set.stream().map(p -> p.col > value ? new Point(p.row, (2 * value) - p.col) : p).collect(Collectors.toSet());
+    }
 
-        final BiFunction<Point, Integer, Point> foldAlong;
-        final BiPredicate<Point, Integer> folds;
-
-        Direction(BiPredicate<Point, Integer> folds, BiFunction<Point, Integer, Point> foldAlong) {
-            this.folds = folds;
-            this.foldAlong = foldAlong;
+    public Function<Set<Point>, Set<Point>> toFold(String value) {
+        String[] values = value.split("=");
+        int distance = Integer.parseInt(values[1]);
+        if (values[0].endsWith("x")) {
+            return s -> foldOnX(s, distance);
+        } else {
+            return s -> foldOnY(s, distance);
         }
     }
 
-    public record FoldingInstruction(Direction axis, int value) {
-        public static FoldingInstruction fromLine(String line) {
-            Matcher matcher = FOLD_PATTERN.matcher(line);
-            if (matcher.matches()) {
-                Direction d = matcher.group(1).charAt(0) == 'x' ? Direction.X : Direction.Y;
-                return new FoldingInstruction(d, Integer.parseInt(matcher.group(2)));
-            }
-            throw new IllegalArgumentException(line);
-        }
+    public char[] line(char c, int size) {
+        char[] chars = new char[size];
+        Arrays.fill(chars, c);
+        return chars;
+    }
 
-        public boolean moves(Point p) {
-            return axis.folds.test(p, value);
-        }
-
-        public Point fold(Point p) {
-            return axis.foldAlong.apply(p, value);
-        }
+    public String toString(Set<Point> set) {
+        Point max = set.stream().reduce(Point::maxPoint).orElseThrow();
+        List<char[]> s = IntStream.range(0, max.row + 1).mapToObj(i -> line(' ', max.col + 1)).collect(Collectors.toList());
+        set.forEach(p -> s.get(p.row)[p.col] = '#');
+        return s.stream().map(String::new).collect(Collectors.joining("\n"));
     }
 
     record Point(int row, int col) {
-        public static Point fromLine(String line) {
-            String[] coords = line.split(",");
-            return new Point(Integer.parseInt(coords[1]), Integer.parseInt(coords[0]));
+        Point maxPoint(Point other) {
+            return new Point(Math.max(row, other.row), Math.max(col, other.col));
         }
     }
-
 }
