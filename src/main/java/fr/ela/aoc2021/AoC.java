@@ -7,7 +7,9 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public abstract class AoC {
@@ -15,6 +17,9 @@ public abstract class AoC {
 
     public abstract void run();
 
+    public static void repeat(int times, IntConsumer action) {
+        IntStream.range(0, times).forEach(action);
+    }
 
     private static String getDirectoryName(Class clazz) {
         return clazz.getSimpleName().toLowerCase();
