@@ -19,11 +19,10 @@ public class D15 extends AoC {
     public void run() {
         findSafestPath(getTestInputPath(), "Test");
         findSafestPath(getInputPath(), "Real");
-
     }
 
     public void findSafestPath(Path input, String name) {
-        List<char[]> lines = list(input, String::toCharArray);
+        List<int[]> lines = list(input, s -> s.chars().map(Character::getNumericValue).toArray());
         Grid grid = new Grid(lines);
         System.out.println(name + " Safe path cost : " + grid.safestPathRiskLevel(grid.start, grid.end));
 
@@ -41,13 +40,13 @@ public class D15 extends AoC {
         final Point start;
         final Point end;
 
-        public Grid(List<char[]> lines) {
+        public Grid(List<int[]> lines) {
             points = new HashMap<>();
             nbRows = lines.size();
             nbCols = lines.get(0).length;
             for (int row = 0; row < nbRows; row++) {
                 for (int col = 0; col < nbCols; col++) {
-                    points.put(new Point(row, col), Character.getNumericValue(lines.get(row)[col]));
+                    points.put(new Point(row, col), lines.get(row)[col]);
                 }
             }
             start = new Point(0, 0);
@@ -73,11 +72,11 @@ public class D15 extends AoC {
     }
 
 
-    private Grid grow(List<char[]> lines) {
-        List<char[]> newLines = new ArrayList<>();
+    private Grid grow(List<int[]> lines) {
+        List<int[]> newLines = new ArrayList<>();
         int length = lines.get(0).length;
-        for (char[] line : lines) {
-            char[] newLine = new char[line.length * 5];
+        for (int[] line : lines) {
+            int[] newLine = new int[line.length * 5];
             System.arraycopy(line, 0, newLine, 0, line.length);
             for (int time = 1; time < 5; time++) {
                 System.arraycopy(increase(line, time), 0,newLine,length * time, line.length);
@@ -91,12 +90,11 @@ public class D15 extends AoC {
         return new Grid(newLines);
     }
 
-    private char[] increase(char[] input, int inc) {
-        char[] out = new char[input.length];
+    private int[] increase(int[] input, int inc) {
+        int[] out = new int[input.length];
         for (int i = 0; i < input.length; i++) {
-            int val = Character.getNumericValue(input[i]) + inc;
-            val = val > 9 ? val -9 : val;
-            out[i] = Character.forDigit(val, 10);
+            int val = input[i] + inc;
+            out[i] = val > 9 ? val -9 : val;
         }
         return out;
     }
