@@ -12,6 +12,9 @@ import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class D15 extends AoC {
 
@@ -49,11 +52,10 @@ public class D15 extends AoC {
             points = new HashMap<>();
             nbRows = lines.size();
             nbCols = lines.get(0).length;
-            for (int row = 0; row < nbRows; row++) {
-                for (int col = 0; col < nbCols; col++) {
-                    points.put(new Point(row, col), lines.get(row)[col]);
-                }
-            }
+            IntStream.range(0, nbRows)
+                    .mapToObj(row -> IntStream.range(0, nbCols).mapToObj(col -> new Point(row, col)))
+                    .flatMap(Function.identity())
+                    .forEach(p -> points.put(p, lines.get(p.row)[p.col]));
             start = new Point(0, 0);
             end = new Point(nbRows - 1, nbCols - 1);
         }
@@ -82,20 +84,20 @@ public class D15 extends AoC {
 
     private Grid grow(List<int[]> lines) {
         List<int[]> newLines = new ArrayList<>();
-        int length = lines.get(0).length;
-        for (int[] line : lines) {
-            int[] newLine = new int[line.length * 5];
-            System.arraycopy(line, 0, newLine, 0, line.length);
-            for (int time = 1; time < 5; time++) {
-                System.arraycopy(increase(line, time), 0, newLine, length * time, line.length);
-            }
-            newLines.add(newLine);
-        }
+        lines.stream().map(this::growLine).collect(Collectors.toCollection(() -> newLines));
         int nbLines = lines.size();
-        for (int i = nbLines; i < nbLines * 5; i++) {
-            newLines.add(increase(newLines.get(i - nbLines), 1));
-        }
+        IntStream.range(nbLines, nbLines * 5)
+                .mapToObj(i -> increase(newLines.get(i - nbLines), 1))
+                .collect(Collectors.toCollection(() -> newLines));
         return new Grid(newLines);
+    }
+
+    private int[] growLine(int[] line) {
+        int[] newLine = new int[line.length * 5];
+        for (int time = 0; time < 5; time++) {
+            System.arraycopy(increase(line, time), 0, newLine, line.length * time, line.length);
+        }
+        return newLine;
     }
 
     private int[] increase(int[] input, int inc) {
