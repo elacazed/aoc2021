@@ -4,16 +4,9 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.LongSummaryStatistics;
-import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class D14 extends AoC {
-
-
-    public void repeat(int times, IntConsumer action) {
-        IntStream.range(0, times).forEach(action);
-    }
 
     @Override
     public void run() {

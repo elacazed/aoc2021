@@ -47,7 +47,7 @@ public class D13 extends AoC {
     public Function<Point, Point> toFold(String value) {
         String[] values = value.split("=");
         int axisPos = Integer.parseInt(values[1]);
-        if (values[0].endsWith("x")) {
+        if (values[0].endsWith("row")) {
             return p -> p.col > axisPos ? new Point(p.row, (2 * axisPos) - p.col) : p;
         } else {
             return p -> p.row > axisPos ? new Point((2 * axisPos) - p.row, p.col) : p;
