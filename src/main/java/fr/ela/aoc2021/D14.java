@@ -1,9 +1,12 @@
 package fr.ela.aoc2021;
 
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.LongSummaryStatistics;
+import java.util.concurrent.TimeUnit;
 import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -18,7 +21,9 @@ public class D14 extends AoC {
     @Override
     public void run() {
         process(getTestInputPath(), "Test");
+        long time = System.nanoTime();
         process(getInputPath(), "Real");
+        System.out.println("Time : "+ ((System.nanoTime() - time)/1000000) +" milliseconds");
     }
 
     public void process(Path input, String name) {
@@ -27,10 +32,8 @@ public class D14 extends AoC {
         List<Rule> rules = list.stream().skip(2).map(Rule::new).collect(Collectors.toList());
 
         CountingMap<String> countPairs = new CountingMap<>();
-        for (int i = 1; i < polymer.length(); i++) {
-            String pair = polymer.substring(i - 1, i+1);
-            countPairs.add(pair, 1);
-        }
+        IntStream.range(1, polymer.length()).mapToObj(i -> polymer.substring(i-1, i+1)).forEach(p -> countPairs.add(p, 1));
+
         CountingMap<Character> countChars = new CountingMap<>();
         polymer.chars().forEach(i -> countChars.add((char) i, 1));
         repeat(10, i -> step(rules, countPairs, countChars));
@@ -89,6 +92,7 @@ public class D14 extends AoC {
                 chars.add(addition, c.count);
                 result.forEach(v -> newPairs.add(v, c.count));
             }
+
         }
     }
 
