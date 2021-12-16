@@ -6,33 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.LongStream;
 
 public class D16 extends AoC {
-
-
-    private static Map<Character, String> codes = buildMap();
-
-    private static Map<Character, String> buildMap() {
-        Map<Character, String> map = new HashMap<>();
-        map.put('0', "0000");
-        map.put('1', "0001");
-        map.put('2', "0010");
-        map.put('3', "0011");
-        map.put('4', "0100");
-        map.put('5', "0101");
-        map.put('6', "0110");
-        map.put('7', "0111");
-        map.put('8', "1000");
-        map.put('9', "1001");
-        map.put('A', "1010");
-        map.put('B', "1011");
-        map.put('C', "1100");
-        map.put('D', "1101");
-        map.put('E', "1110");
-        map.put('F', "1111");
-        return map;
-    }
 
     @Override
     public void run() {
@@ -61,8 +36,15 @@ public class D16 extends AoC {
         return readPacket(toBits(packets), true).versionsSum();
     }
 
+    public static String toBit(int hexa) {
+        char[] result = new char[] {'0', '0','0','0'};
+        char[] value = Integer.toString(Character.digit(hexa, 16), 2).toCharArray();
+        System.arraycopy(value, 0, result, 4 - value.length, value.length);
+        return new String(result);
+    }
+
     public static String toBits(String hexa) {
-        return hexa.chars().mapToObj(c -> codes.get((char) c)).collect(Collectors.joining(""));
+        return hexa.chars().mapToObj(D16::toBit).collect(Collectors.joining(""));
     }
 
     public static List<Packet> readPackets(String bits, boolean pad) {
@@ -83,9 +65,9 @@ public class D16 extends AoC {
         int typeId = Integer.parseInt(bits.substring(3, 6), 2);
 
         if (typeId == 4) {
-            return new LitteralValue(version, typeId, bits.substring(6), pad);
+            return new LitteralValue(version, typeId, bits.substring(6));
         } else {
-            return new Operator(version, typeId, bits.substring(6), pad);
+            return new Operator(version, typeId, bits.substring(6));
         }
     }
 
@@ -94,16 +76,12 @@ public class D16 extends AoC {
         final int typeId;
         int length;
 
-        public Packet(int version, int typeId, String rest, boolean pad) {
+        public Packet(int version, int typeId, String rest) {
             this.version = version;
             this.typeId = typeId;
             length = 6;
             length += readData(rest);
-            if (pad) {
-                if (length % 4 != 0) {
-                    length += 4 - (length % 4);
-                }
-            }
+
         }
 
         abstract int readData(String data);
@@ -118,8 +96,8 @@ public class D16 extends AoC {
     public static class LitteralValue extends Packet {
         long value;
 
-        public LitteralValue(int version, int typeId, String rest, boolean pad) {
-            super(version, typeId, rest, pad);
+        public LitteralValue(int version, int typeId, String rest) {
+            super(version, typeId, rest);
         }
 
         @Override
@@ -145,8 +123,8 @@ public class D16 extends AoC {
 
         List<Packet> subPackets;
 
-        public Operator(int version, int typeId, String substring, boolean pad) {
-            super(version, typeId, substring, pad);
+        public Operator(int version, int typeId, String substring) {
+            super(version, typeId, substring);
         }
 
         int versionsSum() {
