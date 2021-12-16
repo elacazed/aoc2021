@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 
 public class D16 extends AoC {
 
@@ -35,7 +36,6 @@ public class D16 extends AoC {
 
     @Override
     public void run() {
-        System.out.println(toBits(readFile(getInputPath())));
         System.out.println("Test Versions Sum should be 16 : " + getVersionsSum("8A004A801A8002F478"));
         System.out.println("Test Versions Sum should be 12 : " + getVersionsSum("620080001611562C8802118E34"));
         System.out.println("Test Versions Sum should be 23 : " + getVersionsSum("C0015000016115A2E0802F182340"));
@@ -43,9 +43,20 @@ public class D16 extends AoC {
 
         System.out.println("Real Versions Sum : " + getVersionsSum(readFile(getInputPath())));
 
+        System.out.println("Test Versions value should be 3 : "+getValue("C200B40A82"));
+        System.out.println("Test Versions value should be 54 : "+getValue("04005AC33890"));
+        System.out.println("Test Versions value should be 7 : "+getValue("880086C3E88112"));
+        System.out.println("Test Versions value should be 9 : "+getValue("CE00C43D881120"));
+        System.out.println("Test Versions value should be 1 : "+getValue("D8005AC2A8F0"));
+        System.out.println("Test Versions value should be 0 : "+getValue("F600BC2D8F"));
+        System.out.println("Test Versions value should be 0 : "+getValue("9C005AC2F8F0"));
+        System.out.println("Test Versions value should be 1 : "+getValue("9C0141080250320F1802104A08"));
+        System.out.println("Real Versions value : " + getValue(readFile(getInputPath())));
     }
 
-
+    public static long getValue(String packets) {
+        return readPacket(toBits(packets), true).value();
+    }
     public static int getVersionsSum(String packets) {
         return readPacket(toBits(packets), true).versionsSum();
     }
@@ -78,7 +89,7 @@ public class D16 extends AoC {
         }
     }
 
-    public static class Packet {
+    public static abstract class Packet {
         final int version;
         final int typeId;
         int length;
@@ -95,13 +106,13 @@ public class D16 extends AoC {
             }
         }
 
-        int readData(String data) {
-            return 0;
-        }
+        abstract int readData(String data);
 
         int versionsSum() {
             return version;
         }
+
+        public abstract long value();
     }
 
     public static class LitteralValue extends Packet {
@@ -123,10 +134,14 @@ public class D16 extends AoC {
             value = Long.parseLong(sb.toString(), 2);
             return i + 5;
         }
+
+        public long value() {
+            return value;
+        }
     }
 
     public static class Operator extends Packet {
-        int lengthTypeId;
+        private int lengthTypeId;
 
         List<Packet> subPackets;
 
@@ -136,6 +151,36 @@ public class D16 extends AoC {
 
         int versionsSum() {
             return version + subPackets.stream().mapToInt(Packet::versionsSum).sum();
+        }
+
+        @Override
+        public long value() {
+            switch (typeId) {
+                case 0:
+                    return subPackets.stream().mapToLong(Packet::value).sum();
+                case 1:
+                    return subPackets.stream().mapToLong(Packet::value).reduce(1, (x,y) -> x*y);
+                case 2:
+                    return subPackets.stream().mapToLong(Packet::value).min().orElseThrow();
+                case 3:
+                    return subPackets.stream().mapToLong(Packet::value).max().orElseThrow();
+                case 5:
+                    if (subPackets.size() > 2) {
+                        throw new IllegalStateException();
+                    }
+                    return subPackets.get(0).value() > subPackets.get(1).value() ? 1 : 0;
+                case 6:
+                    if (subPackets.size() > 2) {
+                        throw new IllegalStateException();
+                    }
+                    return subPackets.get(0).value() < subPackets.get(1).value() ? 1 : 0;
+                case 7:
+                    if (subPackets.size() > 2) {
+                        throw new IllegalStateException();
+                    }
+                    return subPackets.get(0).value() == subPackets.get(1).value() ? 1 : 0;
+            }
+            throw new IllegalArgumentException(Integer.toString(typeId));
         }
 
         public int readData(String rest) {
