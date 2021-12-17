@@ -46,11 +46,14 @@ public class D17 extends AoC {
     public List<Probe> getAllHittingProbes(Target target) {
         int maxVY = maxVy(target);
         List<Probe> probes = new ArrayList<>();
+        int nbShots = 0;
         for (int vx = target.xMax; vx > 1; vx--) {
             for (int vy = target.yMin; vy <= maxVY; vy++) {
                 shoot(target, vx, vy).ifPresent(probes::add);
+                nbShots++;
             }
         }
+        System.out.println("Found all hitting probes, "+nbShots+" tries");
         return probes;
     }
 
