@@ -2,10 +2,8 @@ package fr.ela.aoc2021;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Stack;
-import java.util.stream.IntStream;
 
 
 public class D18 extends AoC {
@@ -128,6 +126,16 @@ public class D18 extends AoC {
             return res;
         }
 
+        public static void getList(SnailfishNumber in, List<SnailfishNumber> lst) {
+            if (in.isRegularNumber()) {
+                lst.add(in);
+            } else {
+                getList(in.left, lst);
+                lst.add(in);
+                getList(in.right, lst);
+            }
+        }
+
         public void split() {
             left = new SnailfishNumber();
             right = new SnailfishNumber();
@@ -167,21 +175,17 @@ public class D18 extends AoC {
         public SnailfishNumber reduce() {
             while (true) {
                 SnailfishNumber exp = findExploder(0);
-                if (exp != null) {
-                    exp.explode(this.leftToRight());
-                    continue;
-                }
-                SnailfishNumber split = findSplit();
-                if (split != null) {
+                if (exp == null) {
+                    SnailfishNumber split = findSplit();
+                    if (split == null) {
+                        return this;
+                    }
                     split.split();
-                    continue;
+                } else {
+                    exp.explode(this.leftToRight());
                 }
-                // End of reduction!
-                break;
             }
-            return this;
         }
-
 
         public SnailfishNumber findSplit() {
             if (isRegularNumber()) {
@@ -216,15 +220,6 @@ public class D18 extends AoC {
         }
     }
 
-    public static void getList(SnailfishNumber in, List<SnailfishNumber> lst) {
-        if (in.isRegularNumber()) {
-            lst.add(in);
-        } else {
-            getList(in.left, lst);
-            lst.add(in);
-            getList(in.right, lst);
-        }
-    }
 
 
     public SnailfishNumber add(SnailfishNumber left, SnailfishNumber right) {
