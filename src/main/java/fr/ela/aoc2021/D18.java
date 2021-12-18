@@ -11,10 +11,6 @@ public class D18 extends AoC {
 
     @Override
     public void run() {
-        //SnailfishNumber sum = list(getTestInputPath(), this::parse).stream().reduce(new SnailfishNumber(), this::add);
-        //reduce(sum);
-        //System.out.println(sum);
-
         resolve(getTestInputPath(), "Test");
         resolve(getInputPath(), "Real");
     }
