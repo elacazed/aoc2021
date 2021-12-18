@@ -2,9 +2,10 @@ package fr.ela.aoc2021;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Stack;
+import java.util.stream.IntStream;
 
 
 public class D18 extends AoC {
@@ -17,11 +18,27 @@ public class D18 extends AoC {
 
     public void resolve(Path input, String name) {
         List<SnailfishNumber> numbers = list(input, this::parse);
-        SnailfishNumber sum = numbers.stream().reduce(new SnailfishNumber(), this::add);
-        reduce(sum);
+        SnailfishNumber sum = numbers.stream().reduce(new SnailfishNumber(), this::add).reduce().reduce();
+
         System.out.println(name + " Final SnailNumber : " + sum);
         System.out.println(name + " Magnitude : " + sum.getMagnitude());
+
+        // Les nombres sont modifiés à chaque opération (explode / split) donc il faut repartir du début..
+        // La liste initiale n'a pas été modifiée : on copie les SnailfishNumbers dans add(..)
+        long magnitudeMax = 0;
+        for (int i = 0; i < numbers.size(); i++) {
+            for (int j = 0; j < numbers.size(); j++) {
+                if (i != j) {
+                    SnailfishNumber sn1 = numbers.get(i);
+                    SnailfishNumber sn2 = numbers.get(j);
+
+                    magnitudeMax = Math.max(add(sn1, sn2).reduce().getMagnitude(), magnitudeMax);
+                }
+            }
+        }
+        System.out.println(name + " Maximum Magnitude : " + magnitudeMax);
     }
+
 
     public SnailfishNumber parse(String line) {
         char[] chars = line.toCharArray();
@@ -57,7 +74,6 @@ public class D18 extends AoC {
         sn.value = value;
         return sn;
     }
-
 
     public static class SnailfishNumber {
         SnailfishNumber left;
@@ -120,21 +136,17 @@ public class D18 extends AoC {
             value = 0;
         }
 
-
         private void explode(List<SnailfishNumber> leftToRight) {
             if (left.isPair() || right.isPair()) {
                 throw new IllegalStateException("Cannot explode " + this);
             }
-
             int reg_idx = leftToRight.indexOf(this);
             if (reg_idx == -1) {
                 throw new IllegalStateException(this + " not found in leftToRight list!");
             }
+            // Dans la liste, les éléments d'une paire qui explose sont juste à côté de la paire.
+            // Donc on doit commencer à chercher à index -2 pour la gauhe, et index +2 pour la droite.
 
-            // Ok, so we want the nearest regular numbers
-            // to throw values on.  But the regular numbers
-            // that are directly under this exploder are right next to it
-            // so start the search at -2 and +2
             for (int i = reg_idx - 2; i >= 0; i--) {
                 if (leftToRight.get(i).isRegularNumber()) {
                     leftToRight.get(i).value += left.value;
@@ -152,6 +164,56 @@ public class D18 extends AoC {
             value = 0;
         }
 
+        public SnailfishNumber reduce() {
+            while (true) {
+                SnailfishNumber exp = findExploder(0);
+                if (exp != null) {
+                    exp.explode(this.leftToRight());
+                    continue;
+                }
+                SnailfishNumber split = findSplit();
+                if (split != null) {
+                    split.split();
+                    continue;
+                }
+                // End of reduction!
+                break;
+            }
+            return this;
+        }
+
+
+        public SnailfishNumber findSplit() {
+            if (isRegularNumber()) {
+                return value < 10 ? null : this;
+            }
+            // Leftmost RegularNumber.
+            SnailfishNumber left = this.left.findSplit();
+            return left == null ? this.right.findSplit() : left;
+        }
+
+        public SnailfishNumber findExploder(int level) {
+            if (isRegularNumber()) {
+                return null;
+            }
+
+            SnailfishNumber eleft = left.findExploder(level + 1);
+            if (eleft != null) {
+                return eleft;
+            }
+            if (mayExplode() && level >= 4) {
+                return this;
+            }
+            return right.findExploder(level + 1);
+        }
+
+        public SnailfishNumber copy() {
+            SnailfishNumber sn = new SnailfishNumber();
+            sn.left = left == null ? null : left.copy();
+            sn.right = right == null ? null : right.copy();
+            sn.value = value;
+            return sn;
+        }
     }
 
     public static void getList(SnailfishNumber in, List<SnailfishNumber> lst) {
@@ -165,52 +227,8 @@ public class D18 extends AoC {
     }
 
 
-    public static SnailfishNumber findSplit(SnailfishNumber sn) {
-        if (sn.isRegularNumber()) {
-            return sn.value < 10 ? null : sn;
-        }
-        // Leftmost RegularNumber.
-        SnailfishNumber left = findSplit(sn.left);
-        return left == null ? findSplit(sn.right) : left;
-    }
-
-    public static SnailfishNumber findExploder(SnailfishNumber sn, int level) {
-        if (sn.isRegularNumber()) {
-            return null;
-        }
-
-        SnailfishNumber eleft = findExploder(sn.left, level + 1);
-        if (eleft != null) {
-            return eleft;
-        }
-        if (sn.mayExplode() && level >= 4) {
-            return sn;
-        }
-        return findExploder(sn.right, level + 1);
-    }
-
-    public SnailfishNumber add(SnailfishNumber a, SnailfishNumber b) {
-        SnailfishNumber result = new SnailfishNumber(a, b);
-        reduce(result);
-        return result;
-    }
-
-    public SnailfishNumber reduce(SnailfishNumber in) {
-        while (true) {
-            SnailfishNumber exp = findExploder(in, 0);
-            if (exp != null) {
-                exp.explode(in.leftToRight());
-                continue;
-            }
-            SnailfishNumber split = findSplit(in);
-            if (split != null) {
-                split.split();
-                continue;
-            }
-            // End of reduction!
-            break;
-        }
-        return in;
+    public SnailfishNumber add(SnailfishNumber left, SnailfishNumber right) {
+        return new SnailfishNumber(left.copy(), right.copy()).reduce();
     }
 
 
