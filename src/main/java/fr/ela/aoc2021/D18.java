@@ -10,16 +10,17 @@ public class D18 extends AoC {
 
     @Override
     public void run() {
-        resolve(getTestInputPath(), "Test");
-        resolve(getInputPath(), "Real");
+        resolve(getTestInputPath(), "Test", "4140", "3993");
+        resolve(getInputPath(), "Real", null, null);
     }
 
-    public void resolve(Path input, String name) {
+    public void resolve(Path input, String name, String result1, String result2) {
         List<SnailfishNumber> numbers = list(input, this::parse);
         SnailfishNumber sum = numbers.stream().reduce(new SnailfishNumber(), this::add).reduce().reduce();
 
         System.out.println(name + " Final SnailNumber : " + sum);
-        System.out.println(name + " Magnitude : " + sum.getMagnitude());
+        String ok = result1 == null ? "" : " (should be " + result1 + ")";
+        System.out.println(name + " Magnitude : " + sum.getMagnitude() + ok);
 
         // Les nombres sont modifiés à chaque opération (explode / split) donc il faut repartir du début..
         // La liste initiale n'a pas été modifiée : on copie les SnailfishNumbers dans add(..)
@@ -34,7 +35,9 @@ public class D18 extends AoC {
                 }
             }
         }
-        System.out.println(name + " Maximum Magnitude : " + magnitudeMax);
+        ok = result1 == null ? "" : " should be " + result2 + ")";
+
+        System.out.println(name + " Maximum Magnitude : " + magnitudeMax + ok);
     }
 
 
@@ -74,17 +77,17 @@ public class D18 extends AoC {
     }
 
     public static class SnailfishNumber {
+        SnailfishNumber parent;
         SnailfishNumber left;
         SnailfishNumber right;
         int value;
 
         public SnailfishNumber() {
-
         }
 
         public SnailfishNumber(SnailfishNumber left, SnailfishNumber right) {
-            this.left = left;
-            this.right = right;
+            addElement(left);
+            addElement(right);
         }
 
         boolean isRegularNumber() {
@@ -102,6 +105,15 @@ public class D18 extends AoC {
             return String.format("[%s,%s]", left.toString(), right.toString());
         }
 
+        public int depth() {
+            if (parent == null) {
+                return 0;
+            } else {
+                int depth = 1 + parent.depth();
+                return depth;
+            }
+        }
+
         public void addElement(SnailfishNumber sn) {
             if (left == null) {
                 left = sn;
@@ -110,10 +122,11 @@ public class D18 extends AoC {
             } else {
                 throw new IllegalStateException();
             }
+            sn.parent = this;
         }
 
         public boolean mayExplode() {
-            return isPair() && left.isRegularNumber() && right.isRegularNumber();
+            return depth() >= 4 && isPair() && left.isRegularNumber() && right.isRegularNumber();
         }
 
         public long getMagnitude() {
@@ -137,10 +150,8 @@ public class D18 extends AoC {
         }
 
         public void split() {
-            left = new SnailfishNumber();
-            right = new SnailfishNumber();
-            left.value = value / 2;
-            right.value = (value % 2 == 1) ? left.value + 1 : left.value;
+            addElement(regularNumber(value / 2));
+            addElement(regularNumber(value - left.value));
             value = 0;
         }
 
@@ -152,16 +163,17 @@ public class D18 extends AoC {
             if (expIndex == -1) {
                 throw new IllegalStateException(this + " not found in leftToRight list!");
             }
-            // Dans la liste, les éléments d'une paire qui explose sont juste à côté de la paire.
-            // Donc on doit commencer à chercher à index -2 pour la gauhe, et index +2 pour la droite.
 
-            for (int i = expIndex - 2; i >= 0; i--) {
+            // Dans la liste, les éléments d'une paire qui explose sont juste à côté de la paire.
+            // Donc on doit commencer à chercher à index -2 pour la gauche, et index +2 pour la droite.
+            for (int i = reg_idx - 2; i >= 0; i--) {
                 if (leftToRight.get(i).isRegularNumber()) {
                     leftToRight.get(i).value += left.value;
                     break;
                 }
             }
-            for (int i = expIndex + 2; i < leftToRight.size(); i++) {
+
+            for (int i = reg_idx + 2; i < leftToRight.size(); i++) {
                 if (leftToRight.get(i).isRegularNumber()) {
                     leftToRight.get(i).value += right.value;
                     break;
@@ -174,7 +186,7 @@ public class D18 extends AoC {
 
         public SnailfishNumber reduce() {
             while (true) {
-                SnailfishNumber exp = findExploder(0);
+                SnailfishNumber exp = findExploder();
                 if (exp == null) {
                     SnailfishNumber split = findSplit();
                     if (split == null) {
@@ -196,30 +208,36 @@ public class D18 extends AoC {
             return left == null ? this.right.findSplit() : left;
         }
 
-        public SnailfishNumber findExploder(int level) {
+        public SnailfishNumber findExploder() {
             if (isRegularNumber()) {
                 return null;
             }
-
-            SnailfishNumber eleft = left.findExploder(level + 1);
+            SnailfishNumber eleft = left.findExploder();
             if (eleft != null) {
                 return eleft;
             }
-            if (mayExplode() && level >= 4) {
+
+            if (mayExplode()) {
                 return this;
             }
-            return right.findExploder(level + 1);
+            return right.findExploder();
         }
 
         public SnailfishNumber copy() {
             SnailfishNumber sn = new SnailfishNumber();
-            sn.left = left == null ? null : left.copy();
-            sn.right = right == null ? null : right.copy();
+            if (left != null) {
+                sn.left = left.copy();
+                sn.left.parent = sn;
+            }
+            if (right != null) {
+                sn.right = right.copy();
+                sn.right.parent = sn;
+            }
             sn.value = value;
+            sn.parent = this.parent;
             return sn;
         }
     }
-
 
 
     public SnailfishNumber add(SnailfishNumber left, SnailfishNumber right) {
