@@ -148,20 +148,20 @@ public class D18 extends AoC {
             if (left.isPair() || right.isPair()) {
                 throw new IllegalStateException("Cannot explode " + this);
             }
-            int reg_idx = leftToRight.indexOf(this);
-            if (reg_idx == -1) {
+            int expIndex = leftToRight.indexOf(this);
+            if (expIndex == -1) {
                 throw new IllegalStateException(this + " not found in leftToRight list!");
             }
             // Dans la liste, les éléments d'une paire qui explose sont juste à côté de la paire.
             // Donc on doit commencer à chercher à index -2 pour la gauhe, et index +2 pour la droite.
 
-            for (int i = reg_idx - 2; i >= 0; i--) {
+            for (int i = expIndex - 2; i >= 0; i--) {
                 if (leftToRight.get(i).isRegularNumber()) {
                     leftToRight.get(i).value += left.value;
                     break;
                 }
             }
-            for (int i = reg_idx + 2; i < leftToRight.size(); i++) {
+            for (int i = expIndex + 2; i < leftToRight.size(); i++) {
                 if (leftToRight.get(i).isRegularNumber()) {
                     leftToRight.get(i).value += right.value;
                     break;
