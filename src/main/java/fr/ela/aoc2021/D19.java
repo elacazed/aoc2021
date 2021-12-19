@@ -4,10 +4,13 @@ import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 public class D19 extends AoC {
@@ -99,27 +102,44 @@ public class D19 extends AoC {
             return Math.abs(other.x - x) + Math.abs(other.y - y) + Math.abs(other.z - z);
         }
 
+        public Signal rotate(Orientation o) {
+            return up(o.up).rot(o.rot);
+        }
     }
 
 
-    private static class ScannerOrientation {
-        final Scanner[] variations;
+    private static class ScannerOrientations {
+        final Map<Orientation, Scanner> rotations;
 
-        public ScannerOrientation(Scanner sc) {
-            variations = new Scanner[24];
+        public ScannerOrientations(Scanner sc) {
+            rotations = new HashMap<>();
+            Orientation.ALL.forEach(r -> rotations.put(r, sc.rotate(r)));
+        }
+
+        public Scanner get(Orientation o) {
+            return rotations.get(o);
+        }
+    }
+
+    private record Orientation(int up, int rot) {
+
+        private static List<Orientation> ALL = orientations();
+        private static final Orientation BASE = new Orientation(0,0);
+
+        static List<Orientation> orientations() {
+            List<Orientation> orientations = new ArrayList<>();
             for (int up = 0; up < 6; up++) {
                 for (int rot = 0; rot < 4; rot++) {
-                    variations[rot + up * 4] = new Scanner(sc, up, rot);
+                    orientations.add(new Orientation(up, rot));
                 }
             }
+            return orientations;
         }
 
-        public Scanner get(int up, int rot) {
-            return variations[rot + up * 4];
-        }
     }
 
     private static class Scanner {
+
         final List<Signal> beacons;
 
         int[][] fingerprint;
@@ -132,11 +152,14 @@ public class D19 extends AoC {
             this.beacons = new ArrayList<>(other.beacons);
         }
 
-        public Scanner(Scanner other, int up, int rot) {
-            this.beacons = new ArrayList<>();
-            for (var b : other.beacons) {
-                this.beacons.add(b.up(up).rot(rot));
-            }
+        public Scanner rotate(Orientation o) {
+            Scanner scanner = new Scanner();
+            beacons.stream().map(sc -> sc.rotate(o)).collect(Collectors.toCollection(() -> scanner.beacons));
+            return scanner;
+        }
+
+        public void addSignal(Signal signal) {
+            this.beacons.add(signal);
         }
 
         public int[][] finger() {
@@ -207,9 +230,9 @@ public class D19 extends AoC {
         /**
          * Try to match the given scanner (for all orientations) with our beacons
          */
-        public Pair<Scanner, Signal> match(ScannerOrientation other) {
-            for (int i = 0; i < other.variations.length; i++) {
-                var sc = other.variations[i];
+        public Pair<Scanner, Signal> match(ScannerOrientations other) {
+            for (Orientation o : Orientation.ALL) {
+                var sc = other.rotations.get(o);
                 var mat = test(sc);
                 if (mat != null) return Pair.of(sc, mat);
             }
@@ -227,18 +250,15 @@ public class D19 extends AoC {
             }
         }
 
-        public void addSignal(Signal parseSignal) {
-            this.beacons.add(parseSignal);
-        }
     }
 
 
     protected void part1(Path path) {
-        var scanners = readScanners(path).stream().map(ScannerOrientation::new).collect(Collectors.toList());
+        var scanners = readScanners(path).stream().map(ScannerOrientations::new).collect(Collectors.toList());
         var orientation = new Scanner[scanners.size()];
         var position = new Signal[scanners.size()];
 
-        orientation[0] = scanners.get(0).get(0, 0);
+        orientation[0] = scanners.get(0).get(Orientation.BASE);
         position[0] = new Signal(0, 0, 0);
 
         Queue<Integer> frontier = new ArrayDeque<>();
@@ -248,7 +268,7 @@ public class D19 extends AoC {
             var front = frontier.poll();
             for (int i = 0; i < scanners.size(); i++) {
                 if (position[i] == null) {
-                    if (scanners.get(front).get(0, 0).fingerMatch(scanners.get(i).get(0, 0))) {
+                    if (scanners.get(front).get(Orientation.BASE).fingerMatch(scanners.get(i).get(Orientation.BASE))) {
                         var match = orientation[front].match(scanners.get(i));
                         if (match != null) {
                             orientation[i] = match.a; // correct orientation!
