@@ -4,9 +4,8 @@ import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.stream.Collectors;
 
@@ -29,56 +28,8 @@ public class D19 extends AoC {
 
     @Override
     public void run() {
-        resolve("Test", getTestInputPath());
-    }
-
-    public void resolve(String name, Path path) {
-        List<ScannerOrientation> scanners = readScanners(path).stream().map(ScannerOrientation::new).collect(Collectors.toList());
-
-        var orientation = new Scanner[scanners.size()];
-        var signals = new Signal[scanners.size()];
-
-        // On prend le premier scanner comme base, sans le réorienter.
-        orientation[0] = scanners.get(0).get(0, 0);
-        signals[0] = new Signal(0, 0, 0);
-
-        Queue<Integer> frontier = new ArrayDeque<>();
-        frontier.add(0);
-
-        while (!frontier.isEmpty()) {
-            var front = frontier.poll();
-            for (int i = 0; i < scanners.size(); i++) {
-                if (signals[i] == null) {
-                    if (scanners.get(front).get(0, 0).fingerMatch(scanners.get(i).get(0, 0))) {
-                        var match = orientation[front].match(scanners.get(i));
-                        if (match != null) {
-                            orientation[i] = match.a; // correct orientation!
-                            signals[i] = signals[front].relativeTo(match.b);
-                            frontier.add(i);
-                        }
-                    }
-                }
-            }
-        }
-
-        var result = orientation[0].copy();
-        for (int i = 1; i < scanners.size(); i++) {
-            result.add(orientation[i], signals[i]);
-        }
-
-        int maxDist = Integer.MIN_VALUE;
-        for (int i = 0; i < signals.length; i++) {
-            for (int j = 0; j < signals.length; j++) {
-                var one = signals[i];
-                var two = signals[j];
-                var d = Math.abs(one.x - two.x) + Math.abs(one.y - two.y) + Math.abs(one.z - two.z);
-                maxDist = Math.max(maxDist, d);
-            }
-        }
-
-        System.out.println(name + " Probe Beacons : " + result.signals.size());
-        System.out.println(name + " maximum distance : " + maxDist);
-
+        part1(getTestInputPath());
+        part1(getInputPath());
     }
 
 
@@ -118,8 +69,8 @@ public class D19 extends AoC {
             return new Signal(x + other.x, y + other.y, z + other.z);
         }
 
-        public Signal align(Orientation orientation) {
-            return up(orientation.up).rot(orientation.rot);
+        public Signal(Signal one, Signal two) {
+            this(one.x + two.x, one.y + two.y, one.z + two.z);
         }
 
         public Signal up(int up) {
@@ -151,10 +102,6 @@ public class D19 extends AoC {
     }
 
 
-    private record Orientation(int rot, int up) {
-    }
-
-
     private static class ScannerOrientation {
         final Scanner[] variations;
 
@@ -172,45 +119,32 @@ public class D19 extends AoC {
         }
     }
 
-
-    public static class Scanner {
+    private static class Scanner {
+        final List<Signal> beacons;
 
         int[][] fingerprint;
-        List<Signal> signals = new ArrayList<>();
 
-        public Scanner(Scanner sc, int up, int rot) {
-            this.signals = new ArrayList<>();
-            for (var b : sc.signals) {
-                this.signals.add(b.up(up).rot(rot));
+        public Scanner() {
+            this.beacons = new ArrayList<>();
+        }
+
+        public Scanner(Scanner other) {
+            this.beacons = new ArrayList<>(other.beacons);
+        }
+
+        public Scanner(Scanner other, int up, int rot) {
+            this.beacons = new ArrayList<>();
+            for (var b : other.beacons) {
+                this.beacons.add(b.up(up).rot(rot));
             }
         }
 
-        public Scanner() {
-
-        }
-
-
-        public Scanner copy() {
-            Scanner copy = new Scanner();
-            copy.signals = new ArrayList<>(signals);
-            return copy;
-        }
-
-        void addSignal(Signal signal) {
-            this.signals.add(signal);
-        }
-
-        /**
-         * Calcule une signature pour ce scanner à partir des valeurs des signaux qu'il capte (ie : les distances relatives des beacons entre eux)
-         *
-         * @return
-         */
         public int[][] finger() {
             if (fingerprint == null) {
-                fingerprint = new int[signals.size()][signals.size()];
-                for (int i = 0; i < signals.size(); i++) {
-                    for (int j = 0; j < signals.size(); j++) {
-                        fingerprint[i][j] = signals.get(i).distance(signals.get(j));
+                fingerprint = new int[beacons.size()][beacons.size()];
+                for (int i = 0; i < beacons.size(); i++) {
+                    for (int j = 0; j < beacons.size(); j++) {
+                        fingerprint[i][j] = beacons.get(i).distance(beacons.get(j));
                     }
                     Arrays.sort(fingerprint[i]);
                 }
@@ -218,15 +152,9 @@ public class D19 extends AoC {
             return fingerprint;
         }
 
-        /**
-         * Compare la signature de ce scanner avec un autre : si on a 12 matches de distances égales, on est ok.
-         *
-         * @param other
-         * @return
-         */
         public boolean fingerMatch(Scanner other) {
-            for (int i = 0; i < signals.size(); i++) {
-                for (int j = 0; j < other.signals.size(); j++) {
+            for (int i = 0; i < beacons.size(); i++) {
+                for (int j = 0; j < other.beacons.size(); j++) {
                     var p1 = finger()[i];
                     var p2 = other.finger()[j];
                     // check if fingerprint matches
@@ -238,9 +166,7 @@ public class D19 extends AoC {
                             x++;
                             y++;
                             count++;
-                            if (count >= 12) {
-                                return true;
-                            }
+                            if (count >= 12) return true;
                         } else if (p1[x] > p2[y]) {
                             y++;
                         } else if (p1[x] < p2[y]) {
@@ -253,26 +179,22 @@ public class D19 extends AoC {
         }
 
         private Signal test(Scanner other) {
-            for (int i = 0; i < signals.size(); i++) {
-                for (int j = 0; j < other.signals.size(); j++) {
-                    var mine = signals.get(i);
-                    var their = other.signals.get(j);
+            for (int i = 0; i < beacons.size(); i++) {
+                for (int j = 0; j < other.beacons.size(); j++) {
+                    var mine = beacons.get(i);
+                    var their = other.beacons.get(j);
                     var relx = their.x - mine.x;
                     var rely = their.y - mine.y;
                     var relz = their.z - mine.z;
                     int count = 0;
-                    for (int k = 0; k < signals.size(); k++) {
-                        if ((count + signals.size() - k) < 12) {
-                            break; // not possible
-                        }
-                        for (int l = 0; l < other.signals.size(); l++) {
-                            var m = signals.get(k);
-                            var n = other.signals.get(l);
+                    for (int k = 0; k < beacons.size(); k++) {
+                        if ((count + beacons.size() - k) < 12) break; // not possible
+                        for (int l = 0; l < other.beacons.size(); l++) {
+                            var m = beacons.get(k);
+                            var n = other.beacons.get(l);
                             if ((relx + m.x) == n.x && (rely + m.y) == n.y && (relz + m.z) == n.z) {
                                 count++;
-                                if (count >= 12) {
-                                    return new Signal(relx, rely, relz);
-                                }
+                                if (count >= 12) return new Signal(relx, rely, relz);
                                 break;
                             }
                         }
@@ -283,33 +205,80 @@ public class D19 extends AoC {
         }
 
         /**
-         * Try to match the given scanner (for all orientations) with our signals
+         * Try to match the given scanner (for all orientations) with our beacons
          */
         public Pair<Scanner, Signal> match(ScannerOrientation other) {
             for (int i = 0; i < other.variations.length; i++) {
-                var oriented = other.variations[i];
-                var match = test(oriented);
-                if (match != null) {
-                    return Pair.of(oriented, match);
-                }
+                var sc = other.variations[i];
+                var mat = test(sc);
+                if (mat != null) return Pair.of(sc, mat);
             }
             return null;
         }
 
         /**
-         * Add all unique signals from the other scanner (with relative position) to our beacon list
+         * Add all unique beacons from the other scanner (with relative position) to our beacon list
          */
         public void add(Scanner other, Signal relPos) {
-            for (int l = 0; l < other.signals.size(); l++) {
-                var n = other.signals.get(l);
+            for (int l = 0; l < other.beacons.size(); l++) {
+                var n = other.beacons.get(l);
                 n = new Signal(n.x - relPos.x, n.y - relPos.y, n.z - relPos.z);
-                if (!signals.contains(n)) {
-                    signals.add(n);
+                if (!beacons.contains(n)) beacons.add(n);
+            }
+        }
+
+        public void addSignal(Signal parseSignal) {
+            this.beacons.add(parseSignal);
+        }
+    }
+
+
+    protected void part1(Path path) {
+        var scanners = readScanners(path).stream().map(ScannerOrientation::new).collect(Collectors.toList());
+        var orientation = new Scanner[scanners.size()];
+        var position = new Signal[scanners.size()];
+
+        orientation[0] = scanners.get(0).get(0, 0);
+        position[0] = new Signal(0, 0, 0);
+
+        Queue<Integer> frontier = new ArrayDeque<>();
+        frontier.add(0);
+
+        while (!frontier.isEmpty()) {
+            var front = frontier.poll();
+            for (int i = 0; i < scanners.size(); i++) {
+                if (position[i] == null) {
+                    if (scanners.get(front).get(0, 0).fingerMatch(scanners.get(i).get(0, 0))) {
+                        var match = orientation[front].match(scanners.get(i));
+                        if (match != null) {
+                            orientation[i] = match.a; // correct orientation!
+                            position[i] = new Signal(position[front], match.b);
+                            frontier.add(i);
+                        }
+                    }
                 }
             }
         }
 
+        var result = new Scanner(orientation[0]);
+        for (int i = 1; i < scanners.size(); i++) {
+            result.add(orientation[i], position[i]);
+        }
+
+        int maxDist = Integer.MIN_VALUE;
+        for (int i = 0; i < position.length; i++) {
+            for (int j = 0; j < position.length; j++) {
+                var one = position[i];
+                var two = position[j];
+                var d = Math.abs(one.x - two.x) + Math.abs(one.y - two.y) + Math.abs(one.z - two.z);
+                maxDist = Math.max(maxDist, d);
+            }
+        }
+
+        System.out.println("Part 1: " + result.beacons.size());
+        System.out.println("Part 2: " + maxDist);
     }
+
 
 }
 
