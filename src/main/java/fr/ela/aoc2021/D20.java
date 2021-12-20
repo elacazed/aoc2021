@@ -21,6 +21,7 @@ public class D20 extends AoC {
     public void resolve(Path path, String name) {
         List<String> lines = list(path);
         String map = lines.get(0);
+
         int max = lines.size();
 
         Grid grid = new Grid(max);
@@ -32,10 +33,14 @@ public class D20 extends AoC {
                 }
             }
         }
-        //System.out.println(grid);
-        Grid g = grid.enhance(map, '0').enhance(map, '1');
-        System.out.println(g);
-        System.out.println(name + " map : " + g.lightPoints() + " lightpoints after 2 enhancements (5326)");
+
+        Grid g = grid.enhance(map, '0').enhance(map, map.charAt(0) == '.' ? '0':'1');
+        System.out.println(name + " map : " + g.lightPoints() + " lightpoints after 2 enhancements");
+        for (int i = 0; i < 50; i++) {
+            grid = grid.enhance(map, (i % 2 == 0) ? '0' : (map.charAt(0) == '.' ? '0':'1'));
+        }
+        System.out.println(name + " map : " + grid.lightPoints() + " lightpoints after 50 enhancements");
+
     }
 
 
@@ -86,7 +91,7 @@ public class D20 extends AoC {
         }
 
         public Grid enhance(String line, char def) {
-            Grid g = new Grid(minX -1, maxX+1, minY-1, maxY+1);
+            Grid g = new Grid(minX - 1, maxX + 1, minY - 1, maxY + 1);
 
             for (int x = g.minX; x <= g.maxX; x++) {
                 for (int y = g.minY - 1; y <= g.maxY; y++) {
