@@ -2,9 +2,7 @@ package fr.ela.aoc2021;
 
 import java.nio.file.Path;
 import java.util.HashSet;
-import java.util.IntSummaryStatistics;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 
@@ -20,7 +18,7 @@ public class D20 extends AoC {
 
     public void resolve(Path path, String name) {
         List<String> lines = list(path);
-        String map = lines.get(0);
+        int[] map = lines.get(0).chars().map(c -> ((char) c == '#' ? 1 : 0)).toArray();
 
         int max = lines.size();
 
@@ -34,12 +32,15 @@ public class D20 extends AoC {
             }
         }
 
-        Grid g = grid.enhance(map, '0').enhance(map, map.charAt(0) == '.' ? '0':'1');
+        Grid g = grid.enhance(map).enhance(map);
         System.out.println(name + " map : " + g.lightPoints() + " lightpoints after 2 enhancements");
+
+        long time = System.nanoTime();
         for (int i = 0; i < 50; i++) {
-            grid = grid.enhance(map, (i % 2 == 0) ? '0' : (map.charAt(0) == '.' ? '0':'1'));
+            grid = grid.enhance(map);
         }
         System.out.println(name + " map : " + grid.lightPoints() + " lightpoints after 50 enhancements");
+        System.out.println("Time : " + ((System.nanoTime() - time) / 1000000) + " milliseconds");
 
     }
 
@@ -72,14 +73,16 @@ public class D20 extends AoC {
         final int minY;
         final int maxY;
 
+        final int outsideValue;
 
         Set<Position> lightPoints = new HashSet<>();
 
         public Grid(int max) {
-            this(0, max, 0, max);
+            this(0, 0, max, 0, max);
         }
 
-        public Grid(int minX, int maxX, int minY, int maxY) {
+        public Grid(int outsideValue, int minX, int maxX, int minY, int maxY) {
+            this.outsideValue = outsideValue;
             this.minX = minX;
             this.maxX = maxX;
             this.minY = minY;
@@ -90,58 +93,52 @@ public class D20 extends AoC {
             return lightPoints.size();
         }
 
-        public Grid enhance(String line, char def) {
-            Grid g = new Grid(minX - 1, maxX + 1, minY - 1, maxY + 1);
+        public Grid enhance(int[] line) {
+            int outsideValueEnhanced = this.outsideValue == 0 ? line[0] : line[511];
+            Grid g = new Grid(outsideValueEnhanced, minX - 1, maxX + 1, minY - 1, maxY + 1);
 
             for (int x = g.minX; x <= g.maxX; x++) {
                 for (int y = g.minY - 1; y <= g.maxY; y++) {
-                    enhance(Position.of(x, y), line, def).ifPresent(g::add);
+                    g.add(enhance(Position.of(x, y), line));
                 }
             }
             return g;
         }
 
         private void add(Position position) {
-            lightPoints.add(position);
+            if (position != null) {
+                lightPoints.add(position);
+            }
         }
 
         boolean inside(Position p) {
             return p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY;
         }
 
-        char valueOf(Position p, char def) {
+        int valueOf(Position p) {
             if (inside(p)) {
-                return lightPoints.contains(p) ? '1' : '0';
+                return lightPoints.contains(p) ? 1 : 0;
             } else {
-                return def;
+                return outsideValue == 1 ? 1 : 0;
             }
         }
 
-        public Optional<Position> enhance(Position p, String line, char def) {
-            char[] chars = new char[9];
+        public Position enhance(Position p, int[] line) {
             List<Position> neigbours = p.neighbours();
-            for (int i = 0; i < 9; i++) {
-                chars[i] = valueOf(neigbours.get(i), def);
-            }
-            int index = Integer.parseInt(new String(chars), 2);
-            if (line.charAt(index) == '#') {
-                return Optional.of(new Position(p.x, p.y));
-            }
-            return Optional.empty();
-        }
 
-        public String toString() {
-            IntSummaryStatistics xStats = lightPoints.stream().mapToInt(p -> p.x).summaryStatistics();
-            IntSummaryStatistics yStats = lightPoints.stream().mapToInt(p -> p.y).summaryStatistics();
-
-            StringBuilder sb = new StringBuilder();
-            for (int y = yStats.getMin(); y <= yStats.getMax(); y++) {
-                for (int x = xStats.getMin(); x <= xStats.getMax(); x++) {
-                    sb.append(lightPoints.contains(Position.of(x, y)) ? '#' : '.');
-                }
-                sb.append("\n");
+            int index = valueOf(neigbours.get(8));
+            index += valueOf(neigbours.get(7)) * 2;
+            index += valueOf(neigbours.get(6)) * 4;
+            index += valueOf(neigbours.get(5)) * 8;
+            index += valueOf(neigbours.get(4)) * 16;
+            index += valueOf(neigbours.get(3)) * 32;
+            index += valueOf(neigbours.get(2)) * 64;
+            index += valueOf(neigbours.get(1)) * 128;
+            index += valueOf(neigbours.get(0)) * 256;
+            if (line[index] == 1) {
+                return new Position(p.x, p.y);
             }
-            return sb.toString();
+            return null;
         }
 
 
