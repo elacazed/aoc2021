@@ -2,9 +2,8 @@ package fr.ela.aoc2021;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,74 +21,12 @@ public class D22 extends AoC {
     }
 
     private void resolve(String test, Path path) {
-        Reactor reactor = new Reactor(50);
         List<BootStep> steps = list(path, BootStep::parse);
-        for (BootStep step : steps) {
-            reactor.apply(step);
-        }
-        System.out.println(test + " Boot Sequence Part 1 : " + reactor.onCubes.size());
+
+        // Filter only steps applicable to boxed reactor.
+        List<BootStep> boxed = steps.stream().map(s -> s.applicable(50)).filter(Objects::nonNull).collect(Collectors.toList());
+        System.out.println(test + " Boot Sequence Part 1 : " + bootSequence(boxed));
         System.out.println(test + " Complete Boot Sequence Result : " + bootSequence(steps));
-    }
-
-
-    public class Reactor {
-
-        int minX, minY, minZ;
-        int maxX, maxY, maxZ;
-
-        Set<Cube> onCubes = new HashSet<>();
-
-        public Reactor(int max) {
-            minX = -1 * max;
-            minY = -1 * max;
-            minZ = -1 * max;
-            maxX = max;
-            maxY = max;
-            maxZ = max;
-        }
-
-        public void switchCubes(boolean on, int x1, int x2, int y1, int y2, int z1, int z2) {
-            for (int x = x1; x <= x2; x++) {
-                for (int y = y1; y <= y2; y++) {
-                    for (int z = z1; z <= z2; z++) {
-                        switchCube(Cube.of(x, z, y), on);
-                    }
-                }
-            }
-
-        }
-
-        public void switchCube(Cube c, boolean on) {
-            if (c != null) {
-                if (on) {
-                    onCubes.add(c);
-                } else {
-                    onCubes.remove(c);
-                }
-            }
-        }
-
-        void apply(BootStep step) {
-            int x1 = Math.max(step.cuboid.x1, minX);
-            int x2 = Math.min(step.cuboid.x2, maxX);
-            int y1 = Math.max(step.cuboid.y1, minY);
-            int y2 = Math.min(step.cuboid.y2, maxY);
-            int z1 = Math.max(step.cuboid.z1, minZ);
-            int z2 = Math.min(step.cuboid.z2, maxZ);
-
-            switchCubes(step.on, x1, x2, y1, y2, z1, z2);
-        }
-    }
-
-
-    public record Cube(int x, int y, int z) {
-
-        public static Cube of(int x, int y, int z) {
-            if (Math.abs(x) > 50 || Math.abs(y) > 50 || Math.abs(z) > 50) {
-                return null;
-            }
-            return new Cube(x, y, z);
-        }
     }
 
 
@@ -119,6 +56,19 @@ public class D22 extends AoC {
 
         public Function<List<Cuboid>, List<Cuboid>> toFunc() {
             return this;
+        }
+
+        // Refacto part 1 : transform BootStep in another one limited to reactor size.
+        public BootStep applicable(int max) {
+            int[] x = overlap(-max, cuboid.x1, max, cuboid.x2);
+            int[] y = overlap(-max, cuboid.y1, max, cuboid.y2);
+            int[] z = overlap(-max, cuboid.z1, max, cuboid.z2);
+
+            if (x[0] < x[1] && y[0] < y[1] && z[0] < z[1]) {
+                return new BootStep(on, new Cuboid(x[0], x[1], y[0], y[1], z[0], z[1]));
+            } else {
+                return null;
+            }
         }
 
     }
