@@ -258,6 +258,7 @@ public class D23 extends AoC {
             for (int i = 1; i <= to.pos; i++) {
                 path.add(get(to.room, i));
             }
+            // Remove starting position
             path.remove(0);
             return path;
         }
