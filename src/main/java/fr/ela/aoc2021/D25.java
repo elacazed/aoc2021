@@ -1,35 +1,22 @@
 package fr.ela.aoc2021;
 
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.function.Function;
 
 public class D25 extends AoC {
 
     @Override
     public void run() {
         Grid grid = new Grid(list(getTestInputPath()));
-
-        System.out.println(grid.stepUntilBlock());
-
+        System.out.println("The test cucumbers stop moving after "+grid.stepUntilBlock()+" steps");
         grid = new Grid(list(getInputPath()));
-
-        System.out.println(grid.stepUntilBlock());
-
+        System.out.println("The real cucumbers stop moving after "+grid.stepUntilBlock()+" steps");
     }
 
 
     public record Position(int x, int y) {
-
-        Position east(int width) {
-            return new Position(x == width - 1 ? 0 : x + 1, y);
-        }
-
-        Position south(int height) {
-            return new Position(x, y == height -1 ? 0 : y + 1);
-        }
     }
 
     public class Grid {
@@ -60,46 +47,41 @@ public class D25 extends AoC {
         public int step() {
             int moves = 0;
             Set<Position> newEast = new HashSet<>();
-            for (Position pos : eastCucumbers) {
-                Position move = pos.east(width);
-                if (southCucumbers.contains(move) || eastCucumbers.contains(move)) {
-                    newEast.add(pos);
-                } else {
-                    newEast.add(move);
-                    moves++;
-                }
-            }
+            moves += move(eastCucumbers, newEast, this::east);
             this.eastCucumbers = newEast;
-            Set<Position> newSouth  = new HashSet<>();
-            for (Position pos : southCucumbers) {
-                Position move = pos.south(height);
-                if (southCucumbers.contains(move) || eastCucumbers.contains(move)) {
-                    newSouth.add(pos);
-                } else {
-                    newSouth.add(move);
-                    moves++;
-                }
-            }
+            Set<Position> newSouth = new HashSet<>();
+            moves += move(southCucumbers, newSouth, this::south);
             this.southCucumbers = newSouth;
             return moves;
         }
 
-
-        public String toString() {
-            char[][] chars = new char[height][width];
-            for (int i = 0; i < height; i++) {
-                char[] line = new char[width];
-                Arrays.fill(line, '.');
-                chars[i] = line;
-            }
-            for (Position p : southCucumbers) {
-                chars[p.y][p.x] = 'v';
-            }
-            for (Position p : eastCucumbers) {
-                chars[p.y][p.x] = '>';
-            }
-            return Arrays.stream(chars).map(String::new).collect(Collectors.joining("\n"));
+        Position east(Position pos) {
+            return new Position(pos.x == width - 1 ? 0 : pos.x + 1, pos.y);
         }
+
+        Position south(Position pos) {
+            return new Position(pos.x, pos.y == height - 1 ? 0 : pos.y + 1);
+        }
+
+        public boolean contains(Position pos) {
+            return southCucumbers.contains(pos) || eastCucumbers.contains(pos);
+        }
+
+        private int move(Set<Position> origin, Set<Position> newPositions, Function<Position, Position> move) {
+            int counter = 0;
+            for (Position pos : origin) {
+                Position newPos = move.apply(pos);
+                if (contains(newPos)) {
+                    newPositions.add(pos);
+                } else {
+                    newPositions.add(newPos);
+                    counter++;
+                }
+            }
+            return counter;
+        }
+
+
 
         public int stepUntilBlock() {
             int steps = 0;
