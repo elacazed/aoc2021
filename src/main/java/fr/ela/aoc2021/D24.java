@@ -89,7 +89,7 @@ import java.util.stream.IntStream;
        SI a=26 => on "dépile" (mod 26) et on modifie la valeur juste avant dans la pile (voir plus loin pour la valeur qu'on obtient)
 
    La pile contient les Zk, où k est la "profondeur" dans la pile, k va de 0 à 6 (14 blocs = 7 empilages et 7 dépilages)
-   La valeur de Z à la fin est Somme(k=0, k=7) Zk
+   La valeur de Z à la fin est Somme(k=0, k=7) Zk*26^k
 
    Si on regarde le jeu de données, on peut faire correspondre les empilages et les dépilages.
    E     D
