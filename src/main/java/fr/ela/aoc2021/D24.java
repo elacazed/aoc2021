@@ -11,141 +11,141 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * 14 blocs constitués comme suit :
- * <p>
- * 3 variables :
- * ligne 4  : a tel que a = 1 ou 26
- * Ligne 5  : b tel que b > 10 si a = 1, b < 0 si a = 26
- * ligne 15 : c tel que 1 <= c <= 16
- * <p>
- * Soit ce bloc le N+1 : en entrant dedans on a les valeurs xn, yn, zn
- * lignes 1 et 8 => xn et yn ne rentrent pas en compte.
- * 1 <= w <= 9
- * <p>
- * <p>
- * 0  : inp w
- * 1  : mul x 0
- * => x = 0
- * 2  : add x z
- * => x = zn
- * 3  : mod x 26
- * 4  : div z a
- * => si a = 1,  z = zn
- * => si a = 26, z = zn / 26
- * 5  : add x b
- * => a = 1 => x = zn + b
- * a = 26=> x = (zn / 26) + b
- * 6  : eql x w
- * => si a = 1, b >= 10, x >= 10 => faux => x = 0
- * => si a = 26
- * 7  : eql x 0
- * => si a = 1 : vrai => x = 1
- * => si a = 26 : 0 ou 1
- * 8  : mul y 0
- * => y = 0
- * 9  : add y 25
- * => y = 25
- * 10 : mul y x
- * => y = 25x
- * 11 : add y 1
- * => y = 25x + 1
- * 12 : mul z y
- * => z = z*(25x + 1)
- * 13 : mul y 0
- * => y = 0
- * 14 : add y w
- * => y = w
- * 15 : add y c
- * => y = w+c
- * 16 : mul y x
- * => y = x * (w + c)
- * 17 : add z y
- * => z = zn* (25x+1) + x*(w+c)
- * <p>
- * |  1|  2|   3|  4|  5|  6|  7|  8|  9| 10| 11|  12|  13|  14
- * --------------------------------------------------------------
- * a |  1|  1|   1| 26|  1|  1| 26|  1| 26|  1| 26|  26|  26|  26
- * b | 15| 14|  11|-13| 14| 15| -7| 10|-12| 15|-16|  -9|  -8|  -8
- * c |  4| 16|  14|  3| 11| 13| 11|  7| 12| 15| 13|   1|  15|   4
- * <p>
- * Quand a = 1, alors
- * <p>
- * - ligne 4 : z = zn
- * - b >= 10 => b+x > 10 (ligne 5) => x != w (ligne 6) => x = 1 ligne 7 =>
- * z(fin) = 26 zn + w + c. avec w + c < 9+16 < 26.
- * <p>
- * => On multiplie l'ancienne valeur z par 26 et on ajoute un nombre inférieur à 26.
- * => on construit une pile de nombres < 26
- * => le nombre "empilé" est égal à w+c
- * <p>
- * Quand a = 26 :
- * - on copie dans x le chiffre le plus à droite (mod 26, ligne 3)
- * - on divise par 26 => on dépile!
- * <p>
- * Ensuite on ajoute b (qui est négatif, donc on a toujours qqchose < 26 dans x)
- * - ligne 4 : x = w(n-1) + c (n-1)
- * <p>
- * Si on regarde le jeu de données, on peut faire correspondre les empilages et les dépilages.
- * E     D
- * --------
- * 3  <> 4
- * 6  <> 7
- * 8  <> 9
- * 10 <> 11
- * 5  <> 12
- * 2  <> 13
- * 1  <> 14
- * <p>
- * A chaque entrée dans un bloc "D", la valeur de Z est w+c du bloc E correspondant
- * <p>
- * avec  les blocks i et j, on peut jouer l'algo du bloc j (de type D) :
- * Au départ, z = zi = le dernier z du bloc i (qui est de type E, donc wi+ci)
- * <p>
- * Algo du bloc D correspondant :
- * 0  : inp wj
- * 1  : mul x 0    0, y, zi, wj
- * 2  : add x z    zi, y, zi, wj
- * 3  : mod x 26   zi, y, zi, wj
- * 4  : div z 26   zi, y, 0, wj           (zi = wi + ci, ci < 16 => zi < 26 => z = zi/26 = 0)
- * 5  : add x bj   zi+bj, y, 0, wj
- * 6  : eql x w    w4 == zi+bj ? 1 : 0, y, 0, wj
- * 7  : eql x 0    w4 == zi+bj ? 0 : 1, y, 0, wj
- * 8  : mul y 0    w4 == zi+bj ? 0 : 1, 0, 0, wj
- * 9  : add y 25   w4 == zi+bj ? 0 : 1, 25, 0, wj
- * 10 : mul y x    w4 == zi+bj ? 0 : 1, wj == zi+bj ? 0 : 25, 0, wj
- * 11 : add y 1    w4 == zi+bj ? 0 : 1, wj == zi+bj ? 1 : 26, 0, wj
- * 12 : mul z y    w4 == zi+bj ? 0 : 1, wj == zi+bj ? 1 : 26, 0, wj
- * 12 : mul z y    w4 == zi+bj ? 0 : 1, 0, 0, wj
- * 14 : add y w    w4 == zi+bj ? 0 : 1, wj, 0, wj
- * 15 : add y cj   w4 == zi+bj ? 0 : 1, wj+cj, 0, wj
- * 16 : mul y x    w4 == zi+bj ? 0 : 1, wj == zi+bj ? 0 : wj+cj, 0, wj
- * 17 : add z y    w4 == zi+bj ? 0 : 1, wj == zi+bj ? 0 : wj+cj, wj == zi+bj ? 0 : wj+cj, wj
- * <p>
- * On veut Z final = 0 pour mettre à 0 tous les "chiffres" en base 26 qu'on a empilé, donc wj = zi+bj = wi + ci + bj
- * - Part 1 : les valeurs max de wi et wj (wi "max en premier" parce qu'il a un poids plus fort)
- * - Part 2 : les valeurs min de wi et wj (wi "min en premier" parce qu'il a un poids plus fort)
- * telles que :
- * wj - wi = ci + bj
- * 0 < wi <= 9
- * 0 < wj <= 9
- * <p>
- * => wi <= 9 (max wj) - (ci+bj) => wi = Math.min(9, 9-(ci+bj)) et wj = wi + (ci+bj)
- * => wi >= 1 (min wj) - (ci+bj) => wi = Math.max(1, 1-(ci+bj)) et wj = wi + (ci+bj)
- * <p>
- * Donc :
- * <p>
- * E     D | ci+bj | Di| Dj| di| dj
- * --------|-------|---|---|---|---|
- * 3  <>  4|  1    | 8 | 9 | 1 | 2 |
- * 6  <>  7|  6    | 3 | 9 | 1 | 7 |
- * 8  <>  9| -5    | 9 | 4 | 6 | 1 |
- * 10 <> 11| -1    | 9 | 8 | 2 | 1 |
- * 5  <> 12|  2    | 7 | 9 | 1 | 3 |
- * 2  <> 13|  8    | 1 | 9 | 1 | 9 |
- * 1  <> 14| -4    | 9 | 5 | 5 | 1 |
- * <p>
- * => Part 1 : 91897399498995
- * => Part 2 : 51121176121391
+   14 blocs constitués comme suit :
+   <p>
+   3 variables :
+   ligne 4  : a tel que a = 1 ou 26
+   Ligne 5  : b tel que b > 10 si a = 1, b < 0 si a = 26
+   ligne 15 : c tel que 1 <= c <= 16
+   <p>
+   Soit ce bloc le N+1 : en entrant dedans on a les valeurs xn, yn, zn
+   lignes 1 et 8 => xn et yn ne rentrent pas en compte.
+   1 <= w <= 9
+   <p>
+   <p>
+   0  : inp w
+   1  : mul x 0
+   => x = 0
+   2  : add x z
+   => x = zn
+   3  : mod x 26
+   4  : div z a
+   => si a = 1,  z = zn
+   => si a = 26, z = zn / 26
+   5  : add x b
+   => a = 1 => x = zn + b
+   a = 26=> x = (zn / 26) + b
+   6  : eql x w
+   => si a = 1, b >= 10, x >= 10 => faux => x = 0
+   => si a = 26
+   7  : eql x 0
+   => si a = 1 : vrai => x = 1
+   => si a = 26 : 0 ou 1
+   8  : mul y 0
+   => y = 0
+   9  : add y 25
+   => y = 25
+   10 : mul y x
+   => y = 25x
+   11 : add y 1
+   => y = 25x + 1
+   12 : mul z y
+   => z = z*(25x + 1)
+   13 : mul y 0
+   => y = 0
+   14 : add y w
+   => y = w
+   15 : add y c
+   => y = w+c
+   16 : mul y x
+   => y = x * (w + c)
+   17 : add z y
+   => z = zn* (25x+1) + x*(w+c)
+   <p>
+   |  1|  2|   3|  4|  5|  6|  7|  8|  9| 10| 11|  12|  13|  14
+   --------------------------------------------------------------
+   a |  1|  1|   1| 26|  1|  1| 26|  1| 26|  1| 26|  26|  26|  26
+   b | 15| 14|  11|-13| 14| 15| -7| 10|-12| 15|-16|  -9|  -8|  -8
+   c |  4| 16|  14|  3| 11| 13| 11|  7| 12| 15| 13|   1|  15|   4
+   <p>
+   Quand a = 1, alors
+   <p>
+   - ligne 4 : z = zn
+   - b >= 10 => b+x > 10 (ligne 5) => x != w (ligne 6) => x = 1 ligne 7 =>
+   z(fin) = 26 zn + w + c. avec w + c < 9+16 < 26.
+   <p>
+   => On multiplie l'ancienne valeur z par 26 et on ajoute un nombre inférieur à 26.
+   => on construit une pile de nombres < 26
+   => le nombre "empilé" est égal à w+c
+   <p>
+   Quand a = 26 :
+   - on copie dans x le chiffre le plus à droite (mod 26, ligne 3)
+   - on divise par 26 => on dépile!
+   <p>
+   Ensuite on ajoute b (qui est négatif, donc on a toujours qqchose < 26 dans x)
+   - ligne 4 : x = w(n-1) + c (n-1)
+   <p>
+   Si on regarde le jeu de données, on peut faire correspondre les empilages et les dépilages.
+   E     D
+   --------
+   3  <> 4
+   6  <> 7
+   8  <> 9
+   10 <> 11
+   5  <> 12
+   2  <> 13
+   1  <> 14
+   <p>
+   A chaque entrée dans un bloc "D", la valeur de Z est w+c du bloc E correspondant
+   <p>
+   avec  les blocks i et j, on peut jouer l'algo du bloc j (de type D) :
+   Au départ, z = zi = le dernier z du bloc i (qui est de type E, donc wi+ci)
+   <p>
+   Algo du bloc D correspondant :
+   0  : inp wj
+   1  : mul x 0    0, y, zi, wj
+   2  : add x z    zi, y, zi, wj
+   3  : mod x 26   zi, y, zi, wj
+   4  : div z 26   zi, y, 0, wj           (zi = wi + ci, ci < 16 => zi < 26 => z = zi/26 = 0)
+   5  : add x bj   zi+bj, y, 0, wj
+   6  : eql x w    w4 == zi+bj ? 1 : 0, y, 0, wj
+   7  : eql x 0    w4 == zi+bj ? 0 : 1, y, 0, wj
+   8  : mul y 0    w4 == zi+bj ? 0 : 1, 0, 0, wj
+   9  : add y 25   w4 == zi+bj ? 0 : 1, 25, 0, wj
+   10 : mul y x    w4 == zi+bj ? 0 : 1, wj == zi+bj ? 0 : 25, 0, wj
+   11 : add y 1    w4 == zi+bj ? 0 : 1, wj == zi+bj ? 1 : 26, 0, wj
+   12 : mul z y    w4 == zi+bj ? 0 : 1, wj == zi+bj ? 1 : 26, 0, wj
+   12 : mul z y    w4 == zi+bj ? 0 : 1, 0, 0, wj
+   14 : add y w    w4 == zi+bj ? 0 : 1, wj, 0, wj
+   15 : add y cj   w4 == zi+bj ? 0 : 1, wj+cj, 0, wj
+   16 : mul y x    w4 == zi+bj ? 0 : 1, wj == zi+bj ? 0 : wj+cj, 0, wj
+   17 : add z y    w4 == zi+bj ? 0 : 1, wj == zi+bj ? 0 : wj+cj, wj == zi+bj ? 0 : wj+cj, wj
+   <p>
+   On veut Z final = 0 pour mettre à 0 tous les "chiffres" en base 26 qu'on a empilé, donc wj = zi+bj = wi + ci + bj
+   - Part 1 : les valeurs max de wi et wj (wi "max en premier" parce qu'il a un poids plus fort)
+   - Part 2 : les valeurs min de wi et wj (wi "min en premier" parce qu'il a un poids plus fort)
+   telles que :
+   wj - wi = ci + bj
+   0 < wi <= 9
+   0 < wj <= 9
+   <p>
+   => wi <= 9 (max wj) - (ci+bj) => wi = Math.min(9, 9-(ci+bj)) et wj = wi + (ci+bj)
+   => wi >= 1 (min wj) - (ci+bj) => wi = Math.max(1, 1-(ci+bj)) et wj = wi + (ci+bj)
+   <p>
+   Donc :
+   <p>
+   E     D | ci+bj | Di| Dj| di| dj
+   --------|-------|---|---|---|---|
+   3  <>  4|  1    | 8 | 9 | 1 | 2 |
+   6  <>  7|  6    | 3 | 9 | 1 | 7 |
+   8  <>  9| -5    | 9 | 4 | 6 | 1 |
+   10 <> 11| -1    | 9 | 8 | 2 | 1 |
+   5  <> 12|  2    | 7 | 9 | 1 | 3 |
+   2  <> 13|  8    | 1 | 9 | 1 | 9 |
+   1  <> 14| -4    | 9 | 5 | 5 | 1 |
+   <p>
+   => Part 1 : 91897399498995
+   => Part 2 : 51121176121391
  **/
 public class D24 extends AoC {
 
